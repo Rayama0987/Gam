@@ -28,7 +28,6 @@
             width: 600px;
             display: flex;
             justify-content: space-between;
-            align-items: center; /* ボタンとテキストを中央に揃える */
             padding: 10px 0;
             font-size: 1.2em;
         }
@@ -128,11 +127,6 @@
     <div id="hud">
         <span>スコア: <span id="score-display">0</span></span>
         <span>体力: <span id="health-display">3</span></span>
-        <div>
-            <button onclick="saveGame()" class="upgrade-button" style="background-color: #007BFF;">手動セーブ</button>
-            <button onclick="window.location.reload()" class="upgrade-button" style="background-color: #FFC107;">ロード/リトライ</button>
-            <button onclick="clearSave()" class="upgrade-button" style="background-color: #DC3545;">セーブ消去</button>
-        </div>
     </div>
 
     <script src="script.js"></script>
