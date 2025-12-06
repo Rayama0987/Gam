@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>強化シューティングゲーム</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            background-color: #222;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            min-height: 100vh;
+        }
+        #game-area {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        #game-canvas {
+            border: 2px solid #00ff00;
+            display: block;
+        }
+        #hud {
+            width: 600px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center; /* ボタンとテキストを中央に揃える */
+            padding: 10px 0;
+            font-size: 1.2em;
+        }
+        #upgrade-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            display: none; /* 初期は非表示 */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+            text-align: center;
+            z-index: 10;
+        }
+        .upgrade-button {
+            padding: 10px 20px;
+            margin: 8px; /* ボタン間隔を少し狭く */
+            font-size: 1.1em;
+            cursor: pointer;
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .upgrade-button:hover {
+            background-color: #45a049;
+        }
+        #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(150, 0, 0, 0.8);
+            color: #fff;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 2em;
+            z-index: 11;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-area">
+        <canvas id="game-canvas" width="600" height="700"></canvas>
+        
+        <div id="upgrade-screen">
+            <h2>✨ 強化タイム ✨</h2>
+            <p>現在のスコア: <span id="upgrade-score">0</span></p>
+            <p>強化コスト: **10 スコア**</p>
+            <p>アップグレードを選択してください:</p>
+
+            <div id="upgrade-buttons-container">
+                <button class="upgrade-button" onclick="applyUpgrade('damage')">
+                    ダメージアップ (現在のLv: <span id="lv-damage">1</span>)
+                </button>
+                <button class="upgrade-button" onclick="applyUpgrade('speed')">
+                    弾丸速度上昇 (現在のLv: <span id="lv-speed">1</span>)
+                </button>
+                <button class="upgrade-button" onclick="applyUpgrade('radius')">
+                    当たり判定拡大 (現在のLv: <span id="lv-radius">1</span>)
+                </button>
+                <br>
+                <button class="upgrade-button" onclick="applyUpgrade('fireRate')">
+                    連射速度上昇 (現在のLv: <span id="lv-fireRate">1</span>)
+                </button>
+                <button class="upgrade-button" onclick="applyUpgrade('bulletCount')">
+                    一発の弾数上昇 (現在のLv: <span id="lv-bulletCount">1</span>)
+                </button>
+                <button class="upgrade-button" onclick="applyUpgrade('bounce')">
+                    バウンド確率上昇 (現在のLv: <span id="lv-bounce">0</span>)
+                </button>
+                <br>
+                <button class="upgrade-button" onclick="applyUpgrade('autoAim')">
+                    オートエイム (現在のLv: <span id="lv-autoAim">0</span>)
+                </button>
+            </div>
+            
+            <p id="upgrade-message" style="margin-top: 20px; color: yellow;"></p>
+        </div>
+
+        <div id="game-over-screen">
+            ゲームオーバー！
+            <p style="font-size: 0.5em;">最終スコア: <span id="final-score">0</span></p>
+            <button onclick="window.location.reload()" class="upgrade-button">リトライ</button>
+        </div>
+    </div>
+
+    <div id="hud">
+        <span>スコア: <span id="score-display">0</span></span>
+        <span>体力: <span id="health-display">3</span></span>
+        <div>
+            <button onclick="saveGame()" class="upgrade-button" style="background-color: #007BFF;">手動セーブ</button>
+            <button onclick="window.location.reload()" class="upgrade-button" style="background-color: #FFC107;">ロード/リトライ</button>
+            <button onclick="clearSave()" class="upgrade-button" style="background-color: #DC3545;">セーブ消去</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
