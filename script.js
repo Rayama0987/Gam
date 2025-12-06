@@ -25,7 +25,7 @@ let enemies = [];
 let enemySpawnTimer = 0;
 let enemiesKilled = 0; // 撃破数を追跡するためのカウンター
 const ENEMY_HEALTH = 10;
-const ENEMY_VALUE = 10; // 撃破スコア
+const ENEMY_VALUE = 3; // 撃破スコア
 
 // --- 強化レベル管理 ---
 const UPGRADES = {
@@ -455,3 +455,4 @@ enemySpawnTimer = 0;
 
 // ゲーム開始
 gameLoop(0);
+
