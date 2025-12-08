@@ -10,6 +10,11 @@ let playerHealth = 3;
 let gameRunning = true;
 let isUpgrading = false;
 
+// --- タッチ入力用変数 ---
+let touchActive = false; // タッチ操作中かどうか
+let touchStartX = 0;     // タッチ開始または前回の移動の基準点X座標
+const MOVE_THRESHOLD = 5; // プレイヤーの移動を開始するための最小スワイプ距離（実際はtouchmove内で直接移動させるため不要な可能性もあるが、慣習的に残す）
+
 // --- プレイヤーと弾丸の設定 ---
 const PLAYER = {
     x: GAME_WIDTH / 2,
@@ -50,6 +55,54 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('keyup', (e) => {
     keys[e.code] = false;
 });
+
+// --- タッチ入力処理 (追加) ---
+CANVAS.addEventListener('touchstart', (e) => {
+    // 画面がタッチされていることを記録
+    touchActive = true;
+    
+    // 最初の指の位置を記録
+    const touch = e.touches[0];
+    touchStartX = touch.clientX;
+    
+    // スライドを防ぐため、キー入力をクリア（キーボードとタッチの競合防止）
+    keys = {};
+    
+    // 弾丸発射のフラグを立てる (タップで発射)
+    keys['Space'] = true;
+
+    // ブラウザのデフォルトのスクロール/ズームを防ぐ
+    e.preventDefault(); 
+}, { passive: false });
+
+CANVAS.addEventListener('touchmove', (e) => {
+    if (!touchActive) return;
+
+    const touch = e.touches[0];
+    const currentX = touch.clientX;
+    const deltaX = currentX - touchStartX;
+
+    // プレイヤーの位置を直接更新
+    // DeltaX（指の移動量）を直接プレイヤーの位置に加算してドラッグ移動を実現
+    PLAYER.x += deltaX;
+    
+    // 画面の端で止める
+    PLAYER.x = Math.max(PLAYER.size / 2, Math.min(GAME_WIDTH - PLAYER.size / 2, PLAYER.x));
+
+    // 次の移動の基準点として、現在の位置を新たな開始点に設定
+    touchStartX = currentX;
+
+    e.preventDefault(); 
+}, { passive: false });
+
+
+CANVAS.addEventListener('touchend', (e) => {
+    touchActive = false;
+    keys['Space'] = false; // 発射を停止
+    
+    e.preventDefault(); 
+});
+
 
 // --- ユーティリティ関数 ---
 
@@ -120,12 +173,14 @@ function draw() {
 function update(deltaTime) {
     if (!gameRunning || isUpgrading) return;
 
-    // 1. プレイヤーの移動
-    if (keys['ArrowLeft'] && PLAYER.x > PLAYER.size / 2) {
-        PLAYER.x -= PLAYER.speed;
-    }
-    if (keys['ArrowRight'] && PLAYER.x < GAME_WIDTH - PLAYER.size / 2) {
-        PLAYER.x += PLAYER.speed;
+    // 1. プレイヤーの移動 (修正: タッチがアクティブでない場合のみ、キーボード入力をチェック)
+    if (!touchActive) { 
+        if (keys['ArrowLeft'] && PLAYER.x > PLAYER.size / 2) {
+            PLAYER.x -= PLAYER.speed * (deltaTime / 16); 
+        }
+        if (keys['ArrowRight'] && PLAYER.x < GAME_WIDTH - PLAYER.size / 2) {
+            PLAYER.x += PLAYER.speed * (deltaTime / 16); 
+        }
     }
 
     // 2. 発射
@@ -383,7 +438,7 @@ function enterUpgradeScreen() {
 window.applyUpgrade = function(type) {
     if (isUpgrading) {
         if (score < BASE_SCORE_TO_UPGRADE) {
-            document.getElementById('upgrade-message').textContent = 'スコアが不足しています。（必要: 200）';
+            document.getElementById('upgrade-message').textContent = 'スコアが不足しています。（必要: 10）';
             return;
         }
 
@@ -407,11 +462,11 @@ window.applyUpgrade = function(type) {
         document.getElementById('lv-autoAim').textContent = UPGRADES.autoAim.level; // ★★★ 追加 ★★★
 
 
-        // スコアがまだ200以上あれば、強化画面を維持して連続強化可能にする
+        // スコアがまだ10以上あれば、強化画面を維持して連続強化可能にする
         if (score >= BASE_SCORE_TO_UPGRADE) {
             document.getElementById('upgrade-message').textContent += ' さらに強化できます。';
         } else {
-             // 200スコア未満になったらゲーム画面に戻る
+             // 10スコア未満になったらゲーム画面に戻る
             isUpgrading = false;
             document.getElementById('upgrade-screen').style.display = 'none';
         }
@@ -455,4 +510,3 @@ enemySpawnTimer = 0;
 
 // ゲーム開始
 gameLoop(0);
-
