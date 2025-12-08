@@ -35,7 +35,7 @@ const UPGRADES = {
     damage: { level: 1, baseDamage: 1, cost: 200, label: "ダメージアップ" },        
     speed: { level: 1, baseSpeed: 10, cost: 200, label: "弾丸速度" },             
     radius: { level: 1, baseRadius: 4, cost: 200, label: "当たり判定拡大" },
-    // ★★★ 新しい強化項目を追加 ★★★
+   
     autoAim: { level: 0, baseAimStrength: 0.005, cost: 200, label: "オートエイム" } // 補正の強さ
 };
 
@@ -455,4 +455,5 @@ enemySpawnTimer = 0;
 
 // ゲーム開始
 gameLoop(0);
+
 
