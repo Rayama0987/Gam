@@ -88,31 +88,27 @@
             <p>強化コスト: **10 スコア**</p>
             <p>アップグレードを選択してください:</p>
 
-            <div id="upgrade-buttons-container">
-                <button class="upgrade-button" onclick="applyUpgrade('damage')">
-                    ダメージアップ (現在のLv: <span id="lv-damage">1</span>)
-                </button>
-                <button class="upgrade-button" onclick="applyUpgrade('speed')">
-                    弾丸速度上昇 (現在のLv: <span id="lv-speed">1</span>)
-                </button>
-                <button class="upgrade-button" onclick="applyUpgrade('radius')">
-                    当たり判定拡大 (現在のLv: <span id="lv-radius">1</span>)
-                </button>
-                <br>
-                <button class="upgrade-button" onclick="applyUpgrade('fireRate')">
-                    連射速度上昇 (現在のLv: <span id="lv-fireRate">1</span>)
-                </button>
-                <button class="upgrade-button" onclick="applyUpgrade('bulletCount')">
-                    一発の弾数上昇 (現在のLv: <span id="lv-bulletCount">1</span>)
-                </button>
-                <button class="upgrade-button" onclick="applyUpgrade('bounce')">
-                    バウンド確率上昇 (現在のLv: <span id="lv-bounce">0</span>)
-                </button>
-                <br>
-                <button class="upgrade-button" onclick="applyUpgrade('autoAim')">
-                    オートエイム (現在のLv: <span id="lv-autoAim">0</span>)
-                </button>
-            </div>
+           <div id="upgrade-buttons-container">
+    <button class="upgrade-button" onclick="applyUpgrade('damage')">
+        ダメージアップ (現在のLv: <span id="lv-damage">1</span>)
+    </button>
+    <button class="upgrade-button" onclick="applyUpgrade('speed')">
+        弾丸速度上昇 (現在のLv: <span id="lv-speed">1</span>)
+    </button>
+    <button class="upgrade-button" onclick="applyUpgrade('radius')">
+        当たり判定拡大 (現在のLv: <span id="lv-radius">1</span>)
+    </button>
+    <br>
+    <button class="upgrade-button" onclick="applyUpgrade('fireRate')">
+        連射速度上昇 (現在のLv: <span id="lv-fireRate">1</span>)
+    </button>
+    <button class="upgrade-button" onclick="applyUpgrade('bulletCount')">
+        一発の弾数上昇 (現在のLv: <span id="lv-bulletCount">1</span>)
+    </button>
+    <button class="upgrade-button" onclick="applyUpgrade('bounce')">
+        バウンド確率上昇 (現在のLv: <span id="lv-bounce">0</span>)
+    </button>
+    </div>
             
             <p id="upgrade-message" style="margin-top: 20px; color: yellow;"></p>
         </div>
@@ -131,4 +127,5 @@
 
     <script src="script.js"></script>
 </body>
+
 </html>
