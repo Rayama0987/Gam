@@ -76,7 +76,7 @@ CANVAS.addEventListener('touchmove', (e) => {
 CANVAS.addEventListener('touchend', (e) => {
     isTouching = false;
 }, { passive: false });
-// ★★★ ここまで ★★★
+// ★★★ ここまで追加 ★★★
 
 // --- ユーティリティ関数 ---
 
@@ -161,7 +161,7 @@ function update(deltaTime) {
             PLAYER.x += PLAYER.speed;
         }
     }
-    // ★★★ ここまで ★★★
+    // ★★★ ここまで変更 ★★★
 
     // 2. 発射
     // ★★★ タッチ操作中は常に発射するロジックに変更 ★★★
@@ -174,7 +174,7 @@ function update(deltaTime) {
             lastShotTime = now;
         }
     }
-    // ★★★ ここまで ★★★
+    // ★★★ ここまで変更 ★★★
 
     // 3. 弾丸の移動
     bullets = bullets.filter(bullet => {
@@ -244,7 +244,6 @@ function update(deltaTime) {
     checkCollisions();
 
     // 7. 強化画面のチェック
-    // BASE_SCORE_TO_UPGRADE を 200 に修正したため、強化画面への移行条件も変更
     if (!isUpgrading && score >= BASE_SCORE_TO_UPGRADE) {
         enterUpgradeScreen();
     }
@@ -408,7 +407,7 @@ function enterUpgradeScreen() {
     document.getElementById('lv-damage').textContent = UPGRADES.damage.level;
     document.getElementById('lv-speed').textContent = UPGRADES.speed.level;
     document.getElementById('lv-radius').textContent = UPGRADES.radius.level;
-    document.getElementById('lv-autoAim').textContent = UPGRADES.autoAim.level; // ★★★ 追加 ★★★
+    document.getElementById('lv-autoAim').textContent = UPGRADES.autoAim.level; 
 
     document.getElementById('upgrade-screen').style.display = 'flex';
     document.getElementById('upgrade-message').textContent = '';
@@ -441,7 +440,7 @@ window.applyUpgrade = function(type) {
         document.getElementById('lv-damage').textContent = UPGRADES.damage.level;
         document.getElementById('lv-speed').textContent = UPGRADES.speed.level;
         document.getElementById('lv-radius').textContent = UPGRADES.radius.level;
-        document.getElementById('lv-autoAim').textContent = UPGRADES.autoAim.level; // ★★★ 追加 ★★★
+        document.getElementById('lv-autoAim').textContent = UPGRADES.autoAim.level; 
 
 
         // スコアがまだ200以上あれば、強化画面を維持して連続強化可能にする
