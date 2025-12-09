@@ -7,8 +7,7 @@
     <style>
         body {
             display: flex;
-            /* ★修正点1: 縦画面で上から配置するよう修正 */
-            justify-content: flex-start; 
+            justify-content: center;
             align-items: center;
             flex-direction: column;
             background-color: #222;
@@ -16,82 +15,87 @@
             font-family: Arial, sans-serif;
             margin: 0;
             min-height: 100vh;
-            /* ★修正点2: 画面端のパディングを追加 */
-            padding: 10px;
-            box-sizing: border-box;
         }
         #game-area {
             position: relative;
             margin-bottom: 20px;
-            /* ★修正点3: 画面幅に合わせる */
-            width: 100%; 
-            max-width: 600px; /* 論理的なゲーム幅に最大値を設定 */
+            /* ★修正点: ゲームエリアを前面近くに設定 */
+            z-index: 5; 
         }
         #game-canvas {
             border: 2px solid #00ff00;
             display: block;
-            /* ★修正点4: 親要素の幅に合わせて拡大縮小 */
-            width: 100%; 
-            height: auto; 
+            /* ★修正点: Canvasをゲームエリア内で最前面に設定 */
+            position: relative;
+            z-index: 10; 
         }
         #hud {
-            /* ★修正点5: HUDも画面幅に合わせる */
-            width: 100%; 
-            max-width: 600px; 
+            width: 600px;
             display: flex;
             justify-content: space-between;
             padding: 10px 0;
             font-size: 1.2em;
-            box-sizing: border-box;
         }
-        #upgrade-screen, #game-over-screen {
+        #upgrade-screen {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.95);
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            display: none; /* 初期は非表示 */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+            text-align: center;
+            /* ★修正点: Canvasより前面に設定 */
+            z-index: 20; 
+        }
+        .upgrade-button {
+            padding: 10px 20px;
+            margin: 8px; /* ボタン間隔を少し狭く */
+            font-size: 1.1em;
+            cursor: pointer;
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .upgrade-button:hover {
+            background-color: #45a049;
+        }
+        #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(150, 0, 0, 0.8);
             color: #fff;
             display: none;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            text-align: center;
-            padding: 20px;
-            box-sizing: border-box;
-            font-size: 1.5em;
-            z-index: 10;
-        }
-        .upgrade-button {
-            padding: 10px 20px;
-            margin: 5px;
-            background-color: #00ff00;
-            color: #000;
-            border: none;
-            cursor: pointer;
-            font-size: 0.8em;
-            font-weight: bold;
-            border-radius: 5px;
-            transition: background-color 0.1s;
-            /* ★修正点6: ボタンが画面幅を超えないようにする */
-            width: 95%; 
-            max-width: 300px;
-        }
-        .upgrade-button:hover {
-            background-color: #4fff4f;
+            font-size: 2em;
+            /* ★修正点: 全ての上に設定 */
+            z-index: 30; 
         }
     </style>
 </head>
 <body>
-    
     <div id="game-area">
-        <canvas id="game-canvas" width="600" height="800"></canvas>
-
+        <canvas id="game-canvas" width="600" height="700"></canvas>
+        
         <div id="upgrade-screen">
-            <h2>強化チャンス！</h2>
-            <p>現在のスコア: <span id="upgrade-score">0</span> (強化には <span style="color: yellow;">10</span> スコア必要)</p>
-            
-            <div id="upgrade-buttons-container" style="margin-top: 20px;">
+            <h2>✨ 強化タイム ✨</h2>
+            <p>現在のスコア: <span id="upgrade-score">0</span></p>
+            <p>強化コスト: **10 スコア**</p>
+            <p>アップグレードを選択してください:</p>
+
+            <div id="upgrade-buttons-container">
                 <button class="upgrade-button" onclick="applyUpgrade('damage')">
                     ダメージアップ (現在のLv: <span id="lv-damage">1</span>)
                 </button>
@@ -111,7 +115,11 @@
                 <button class="upgrade-button" onclick="applyUpgrade('bounce')">
                     バウンド確率上昇 (現在のLv: <span id="lv-bounce">0</span>)
                 </button>
-                </div>
+                <br>
+                <button class="upgrade-button" onclick="applyUpgrade('autoAim')">
+                    オートエイム (現在のLv: <span id="lv-autoAim">0</span>)
+                </button>
+            </div>
             
             <p id="upgrade-message" style="margin-top: 20px; color: yellow;"></p>
         </div>
@@ -124,11 +132,10 @@
     </div>
 
     <div id="hud">
-        <span>ライフ: <span id="health-display">3</span></span>
         <span>スコア: <span id="score-display">0</span></span>
+        <span>体力: <span id="health-display">3</span></span>
     </div>
 
-    <script src="Gam-main.zip/Gam-main/script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
-
