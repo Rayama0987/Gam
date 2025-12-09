@@ -1,141 +1,185 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>強化シューティングゲーム</title>
-    <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            background-color: #222;
-            color: #fff;
-            font-family: Arial, sans-serif;
-            margin: 0;
-            min-height: 100vh;
+// --- ゲーム設定 ---
+const CANVAS = document.getElementById('game-canvas');
+const CTX = CANVAS.getContext('2d');
+const GAME_WIDTH = CANVAS.width;
+const GAME_HEIGHT = CANVAS.height;
+
+const BASE_SCORE_TO_UPGRADE = 10; 
+let score = 0;
+let playerHealth = 3;
+let gameRunning = true;
+let isUpgrading = false;
+
+// --- プレイヤーと弾丸の設定 ---
+const PLAYER = {
+    x: GAME_WIDTH / 2,
+    y: GAME_HEIGHT - 50,
+    size: 20,
+    speed: 5
+};
+let bullets = [];
+let lastShotTime = 0;
+
+// --- 敵の設定 ---
+let enemies = [];
+let enemySpawnTimer = 0;
+let enemiesKilled = 0; // 撃破数を追跡するためのカウンター
+const ENEMY_HEALTH = 10;
+const ENEMY_VALUE = 3; // 撃破スコア
+
+// --- 強化レベル管理 ---
+const UPGRADES = {
+    fireRate: { level: 1, baseInterval: 400, cost: 200, label: "連射速度" }, // ms
+    bulletCount: { level: 1, baseCount: 1, cost: 200, label: "同時弾数" },
+    bounce: { level: 0, baseChance: 0.1, cost: 200, label: "バウンド弾" }, // 10%
+    damage: { level: 1, baseDamage: 1, cost: 200, label: "ダメージアップ" },        
+    speed: { level: 1, baseSpeed: 10, cost: 200, label: "弾丸速度" },             
+    radius: { level: 1, baseRadius: 4, cost: 200, label: "当たり判定拡大" },
+    // ★★★ 新しい強化項目を追加 ★★★
+    autoAim: { level: 0, baseAimStrength: 0.005, cost: 200, label: "オートエイム" } // 補正の強さ
+};
+
+// --- キー入力処理 ---
+let keys = {};
+document.addEventListener('keydown', (e) => {
+    keys[e.code] = true;
+    if (e.code === 'Space') {
+        e.preventDefault(); 
+    }
+});
+document.addEventListener('keyup', (e) => {
+    keys[e.code] = false;
+});
+
+// ★★★ タッチ入力処理の追加 ★★★
+let isTouching = false; // タッチされているか
+let touchX = GAME_WIDTH / 2; // タッチされたX座標
+
+CANVAS.addEventListener('touchstart', (e) => {
+    e.preventDefault(); // ブラウザのデフォルト動作（スクロールなど）を防止
+    isTouching = true;
+    if (e.touches.length > 0) {
+        // タッチ座標をCanvas座標系に変換
+        const rect = CANVAS.getBoundingClientRect();
+        touchX = e.touches[0].clientX - rect.left;
+    }
+}, { passive: false });
+
+CANVAS.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (e.touches.length > 0) {
+        const rect = CANVAS.getBoundingClientRect();
+        touchX = e.touches[0].clientX - rect.left;
+    }
+}, { passive: false });
+
+CANVAS.addEventListener('touchend', (e) => {
+    isTouching = false;
+}, { passive: false });
+// ★★★ ここまで追加 ★★★
+
+// --- ユーティリティ関数 ---
+
+/**
+ * 2点間の距離を計算する
+ */
+function distance(x1, y1, x2, y2) {
+    return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+}
+
+/**
+ * すべての強化レベルの合計を計算する
+ */
+function getTotalUpgradeLevel() {
+    let total = 0;
+    for (const key in UPGRADES) {
+        total += UPGRADES[key].level;
+    }
+    // 基本レベル(1が6項目, 0が2項目)の合計6を引く
+    return total - 6; 
+}
+
+/**
+ * 描画
+ */
+function draw() {
+    // 1. 背景をクリア
+    CTX.fillStyle = '#000';
+    CTX.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+    // 2. プレイヤーの描画
+    CTX.fillStyle = 'lime';
+    CTX.fillRect(PLAYER.x - PLAYER.size / 2, PLAYER.y - PLAYER.size / 2, PLAYER.size, PLAYER.size);
+
+    // 3. 弾丸の描画
+    bullets.forEach(bullet => {
+        if (bullet.isBounce) {
+            CTX.fillStyle = 'orange'; 
+        } else if (bullet.isAim) {
+            CTX.fillStyle = 'cyan'; // エイム弾は水色
+        } else {
+            CTX.fillStyle = 'yellow';
         }
-        #game-area {
-            position: relative;
-            margin-bottom: 20px;
-            /* ★修正点: ゲームエリアを前面近くに設定 */
-            z-index: 5; 
-        }
-        #game-canvas {
-            border: 2px solid #00ff00;
-            display: block;
-            /* ★修正点: Canvasをゲームエリア内で最前面に設定 */
-            position: relative;
-            z-index: 10; 
-        }
-        #hud {
-            width: 600px;
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            font-size: 1.2em;
-        }
-        #upgrade-screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.9);
-            color: #fff;
-            display: none; /* 初期は非表示 */
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            box-sizing: border-box;
-            text-align: center;
-            /* ★修正点: Canvasより前面に設定 */
-            z-index: 20; 
-        }
-        .upgrade-button {
-            padding: 10px 20px;
-            margin: 8px; /* ボタン間隔を少し狭く */
-            font-size: 1.1em;
-            cursor: pointer;
-            background-color: #4CAF50;
-            border: none;
-            border-radius: 5px;
-            transition: background-color 0.3s;
-        }
-        .upgrade-button:hover {
-            background-color: #45a049;
-        }
-        #game-over-screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(150, 0, 0, 0.8);
-            color: #fff;
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            font-size: 2em;
-            /* ★修正点: 全ての上に設定 */
-            z-index: 30; 
-        }
-    </style>
-</head>
-<body>
-    <div id="game-area">
-        <canvas id="game-canvas" width="600" height="700"></canvas>
+        CTX.beginPath();
+        CTX.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
+        CTX.fill();
+    });
+
+    // 4. 敵の描画
+    enemies.forEach(enemy => {
+        CTX.fillStyle = 'red';
+        CTX.fillRect(enemy.x - enemy.size / 2, enemy.y - enemy.size / 2, enemy.size, enemy.size);
         
-        <div id="upgrade-screen">
-            <h2>✨ 強化タイム ✨</h2>
-            <p>現在のスコア: <span id="upgrade-score">0</span></p>
-            <p>強化コスト: **10 スコア**</p>
-            <p>アップグレードを選択してください:</p>
+        // ヘルスバーを描画
+        const healthRatio = enemy.health / ENEMY_HEALTH;
+        CTX.fillStyle = 'green';
+        CTX.fillRect(enemy.x - enemy.size / 2, enemy.y - enemy.size / 2 - 10, enemy.size * healthRatio, 5);
+    });
 
-            <div id="upgrade-buttons-container">
-                <button class="upgrade-button" onclick="applyUpgrade('damage')">
-                    ダメージアップ (現在のLv: <span id="lv-damage">1</span>)
-                </button>
-                <button class="upgrade-button" onclick="applyUpgrade('speed')">
-                    弾丸速度上昇 (現在のLv: <span id="lv-speed">1</span>)
-                </button>
-                <button class="upgrade-button" onclick="applyUpgrade('radius')">
-                    当たり判定拡大 (現在のLv: <span id="lv-radius">1</span>)
-                </button>
-                <br>
-                <button class="upgrade-button" onclick="applyUpgrade('fireRate')">
-                    連射速度上昇 (現在のLv: <span id="lv-fireRate">1</span>)
-                </button>
-                <button class="upgrade-button" onclick="applyUpgrade('bulletCount')">
-                    一発の弾数上昇 (現在のLv: <span id="lv-bulletCount">1</span>)
-                </button>
-                <button class="upgrade-button" onclick="applyUpgrade('bounce')">
-                    バウンド確率上昇 (現在のLv: <span id="lv-bounce">0</span>)
-                </button>
-                <br>
-                <button class="upgrade-button" onclick="applyUpgrade('autoAim')">
-                    オートエイム (現在のLv: <span id="lv-autoAim">0</span>)
-                </button>
-            </div>
-            
-            <p id="upgrade-message" style="margin-top: 20px; color: yellow;"></p>
-        </div>
+    // 5. HUDの更新
+    document.getElementById('score-display').textContent = score;
+    document.getElementById('health-display').textContent = playerHealth;
+}
 
-        <div id="game-over-screen">
-            ゲームオーバー！
-            <p style="font-size: 0.5em;">最終スコア: <span id="final-score">0</span></p>
-            <button onclick="window.location.reload()" class="upgrade-button">リトライ</button>
-        </div>
-    </div>
+/**
+ * ゲームロジックの更新
+ */
+function update(deltaTime) {
+    if (!gameRunning || isUpgrading) return;
 
-    <div id="hud">
-        <span>スコア: <span id="score-display">0</span></span>
-        <span>体力: <span id="health-display">3</span></span>
-    </div>
+    // 1. プレイヤーの移動
+    // ★★★ タッチ操作による移動ロジックを追加・変更 ★★★
+    if (isTouching) {
+        // タッチされたX座標へ即座にテレポート (画面内に制限)
+        PLAYER.x = Math.min(GAME_WIDTH - PLAYER.size / 2, Math.max(PLAYER.size / 2, touchX));
+    } else {
+        // キーボード操作 (タッチ操作がない場合のみ)
+        if (keys['ArrowLeft'] && PLAYER.x > PLAYER.size / 2) {
+            PLAYER.x -= PLAYER.speed;
+        }
+        if (keys['ArrowRight'] && PLAYER.x < GAME_WIDTH - PLAYER.size / 2) {
+            PLAYER.x += PLAYER.speed;
+        }
+    }
+    // ★★★ ここまで変更 ★★★
 
-    <script src="script.js"></script>
-</body>
-</html>
+    // 2. 発射
+    // ★★★ タッチ操作中は常に発射するロジックに変更 ★★★
+    if (keys['Space'] || isTouching) { // スペースキーまたはタッチ操作で発射
+        const now = Date.now();
+        const fireInterval = UPGRADES.fireRate.baseInterval / UPGRADES.fireRate.level; 
+
+        if (now - lastShotTime > fireInterval) {
+            shoot();
+            lastShotTime = now;
+        }
+    }
+    // ★★★ ここまで変更 ★★★
+
+    // 3. 弾丸の移動
+    bullets = bullets.filter(bullet => {
+        // バウンドしていない通常弾の移動 (Y軸のみ)
+        if (!bullet.isBounce) {
+            bullet.y -= bullet.speed * (deltaTime / 16); 
+        }
+        // バウンド弾の移動 (velX, velY を使用
