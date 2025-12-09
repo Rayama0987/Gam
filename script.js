@@ -35,7 +35,9 @@ const UPGRADES = {
     damage: { level: 1, baseDamage: 1, cost: 200, label: "ダメージアップ" },        
     speed: { level: 1, baseSpeed: 10, cost: 200, label: "弾丸速度" },             
     radius: { level: 1, baseRadius: 4, cost: 200, label: "当たり判定拡大" },
-    };
+    // ★★★ 新しい強化項目を追加 ★★★
+    autoAim: { level: 0, baseAimStrength: 0.005, cost: 200, label: "オートエイム" } // 補正の強さ
+};
 
 // --- キー入力処理 ---
 let keys = {};
@@ -49,14 +51,15 @@ document.addEventListener('keyup', (e) => {
     keys[e.code] = false;
 });
 
-// ★★★ タッチ入力処理の追加（変更なし） ★★★
+// ★★★ タッチ入力処理の追加 ★★★
 let isTouching = false; // タッチされているか
 let touchX = GAME_WIDTH / 2; // タッチされたX座標
 
 CANVAS.addEventListener('touchstart', (e) => {
-    e.preventDefault(); 
+    e.preventDefault(); // ブラウザのデフォルト動作（スクロールなど）を防止
     isTouching = true;
     if (e.touches.length > 0) {
+        // タッチ座標をCanvas座標系に変換
         const rect = CANVAS.getBoundingClientRect();
         touchX = e.touches[0].clientX - rect.left;
     }
@@ -92,11 +95,8 @@ function getTotalUpgradeLevel() {
     for (const key in UPGRADES) {
         total += UPGRADES[key].level;
     }
-    // ★★★ autoAim 削除に伴い、基本レベルの合計値を変更 (以前: 6 => 修正後: 5) ★★★
-    // 強化レベル1が5項目 (fireRate, bulletCount, damage, speed, radius)
-    // 強化レベル0が1項目 (bounce)
-    // 合計: 5 * 1 + 1 * 0 = 5
-    return total - 5; 
+    // 基本レベル(1が6項目, 0が2項目)の合計6を引く
+    return total - 6; 
 }
 
 /**
@@ -115,8 +115,9 @@ function draw() {
     bullets.forEach(bullet => {
         if (bullet.isBounce) {
             CTX.fillStyle = 'orange'; 
+        } else if (bullet.isAim) {
+            CTX.fillStyle = 'cyan'; // エイム弾は水色
         } else {
-            // ★★★ isAim のチェックを削除 (全て通常弾またはバウンド弾) ★★★
             CTX.fillStyle = 'yellow';
         }
         CTX.beginPath();
@@ -147,6 +148,7 @@ function update(deltaTime) {
     if (!gameRunning || isUpgrading) return;
 
     // 1. プレイヤーの移動
+    // ★★★ タッチ操作による移動ロジックを追加・変更 ★★★
     if (isTouching) {
         // タッチされたX座標へ即座にテレポート (画面内に制限)
         PLAYER.x = Math.min(GAME_WIDTH - PLAYER.size / 2, Math.max(PLAYER.size / 2, touchX));
@@ -159,9 +161,11 @@ function update(deltaTime) {
             PLAYER.x += PLAYER.speed;
         }
     }
+    // ★★★ ここまで ★★★
 
     // 2. 発射
-    if (keys['Space'] || isTouching) { 
+    // ★★★ タッチ操作中は常に発射するロジックに変更 ★★★
+    if (keys['Space'] || isTouching) { // スペースキーまたはタッチ操作で発射
         const now = Date.now();
         const fireInterval = UPGRADES.fireRate.baseInterval / UPGRADES.fireRate.level; 
 
@@ -170,6 +174,7 @@ function update(deltaTime) {
             lastShotTime = now;
         }
     }
+    // ★★★ ここまで ★★★
 
     // 3. 弾丸の移動
     bullets = bullets.filter(bullet => {
@@ -189,8 +194,9 @@ function update(deltaTime) {
 
     // 4. 敵の出現
     enemySpawnTimer += deltaTime;
-    const baseSpawnInterval = 5000; 
+    const baseSpawnInterval = 5000; // 1秒間隔を基本とする
     
+    // ★★★ 敵の出現間隔を徐々に短縮するロジックを修正 ★★★
     // 総合レベルと撃破数に基づいて難易度を上げる
     const difficultyFactor = (getTotalUpgradeLevel() / 10) + (enemiesKilled / 100);
     // 最小間隔を 200ms とし、難易度に応じて間隔を短縮
@@ -199,6 +205,7 @@ function update(deltaTime) {
     // whileループに変更: 経過時間に応じて敵の出現処理を確実に実行
     while (enemySpawnTimer >= spawnInterval) {
         
+        // ★★★ 敵の出現数を徐々に増やすロジックを修正 ★★★
         // 総合レベルと撃破数に基づいて出現数を増やす
         let numEnemiesToSpawn = 1 + Math.floor(difficultyFactor / 5);
         // 最低でも1体は出現するように保証
@@ -211,7 +218,7 @@ function update(deltaTime) {
             spawnEnemy(i * 60); 
         }
 
-        enemySpawnTimer -= spawnInterval; 
+        enemySpawnTimer -= spawnInterval; // 経過した時間分をタイマーから引く
     }
     
     // 5. 敵の移動
@@ -237,11 +244,32 @@ function update(deltaTime) {
     checkCollisions();
 
     // 7. 強化画面のチェック
+    // BASE_SCORE_TO_UPGRADE を 200 に修正したため、強化画面への移行条件も変更
     if (!isUpgrading && score >= BASE_SCORE_TO_UPGRADE) {
         enterUpgradeScreen();
     }
 }
 
+// 近くの敵を見つける
+function findClosestEnemy() {
+    let closestEnemy = null;
+    let minDistance = Infinity;
+
+    enemies.forEach(enemy => {
+        const dist = distance(PLAYER.x, PLAYER.y, enemy.x, enemy.y);
+        if (dist < minDistance) {
+            minDistance = dist;
+            closestEnemy = enemy;
+        }
+    });
+
+    // 画面上部2/3にいる敵のみを対象とする
+    if (closestEnemy && closestEnemy.y > GAME_HEIGHT * (2/3)) {
+        return null;
+    }
+
+    return closestEnemy;
+}
 
 
 /**
@@ -254,6 +282,18 @@ function shoot() {
     const currentDamage = UPGRADES.damage.baseDamage * UPGRADES.damage.level;
     const currentRadius = UPGRADES.radius.baseRadius * UPGRADES.radius.level;
     
+    // オートエイムの補正計算
+    let aimCorrection = 0;
+    let isAiming = false;
+    const closestEnemy = findClosestEnemy();
+
+    if (closestEnemy && UPGRADES.autoAim.level > 0) {
+        isAiming = true;
+        // プレイヤーから敵への目標角度を計算
+        const targetAngle = Math.atan2(closestEnemy.x - PLAYER.x, PLAYER.y - closestEnemy.y);
+        // 現在の補正の強さを適用
+        aimCorrection = targetAngle * (UPGRADES.autoAim.baseAimStrength * UPGRADES.autoAim.level);
+    }
 
     for (let i = 0; i < count; i++) {
         let angleOffset = 0;
@@ -261,8 +301,8 @@ function shoot() {
             angleOffset = (i - (count - 1) / 2) * spreadAngle;
         }
         
-        // ★★★ オートエイム補正を削除し、純粋なスプレッド角度のみを適用 ★★★
-        const angleRad = angleOffset * (Math.PI / 180); 
+        // オートエイム補正を適用
+        const angleRad = (angleOffset * (Math.PI / 180)) - aimCorrection; 
 
         bullets.push({
             x: PLAYER.x,
@@ -273,7 +313,7 @@ function shoot() {
             velX: Math.sin(angleRad) * currentSpeed,
             velY: -Math.cos(angleRad) * currentSpeed, // プレイヤーは上方向 (-Y) に撃つ
             isBounce: false,
-            isAim: false // オートエイムは無いため常に false
+            isAim: isAiming && count === 1 // 単発弾のみエイム色にする
         });
     }
 }
@@ -368,7 +408,7 @@ function enterUpgradeScreen() {
     document.getElementById('lv-damage').textContent = UPGRADES.damage.level;
     document.getElementById('lv-speed').textContent = UPGRADES.speed.level;
     document.getElementById('lv-radius').textContent = UPGRADES.radius.level;
-    // ★★★ lv-autoAim の表示更新を削除しました ★★★
+    document.getElementById('lv-autoAim').textContent = UPGRADES.autoAim.level; // ★★★ 追加 ★★★
 
     document.getElementById('upgrade-screen').style.display = 'flex';
     document.getElementById('upgrade-message').textContent = '';
@@ -378,12 +418,6 @@ function enterUpgradeScreen() {
  * 強化を適用し、スコアが 200 以上なら強化画面を維持する
  */
 window.applyUpgrade = function(type) {
-    // ★★★ 存在しないアップグレード ('autoAim') の呼び出しを防ぐためのチェックを追加 ★★★
-    if (!UPGRADES[type]) {
-        console.error("Unknown upgrade type:", type);
-        return;
-    }
-    
     if (isUpgrading) {
         if (score < BASE_SCORE_TO_UPGRADE) {
             document.getElementById('upgrade-message').textContent = 'スコアが不足しています。（必要: 200）';
@@ -407,7 +441,7 @@ window.applyUpgrade = function(type) {
         document.getElementById('lv-damage').textContent = UPGRADES.damage.level;
         document.getElementById('lv-speed').textContent = UPGRADES.speed.level;
         document.getElementById('lv-radius').textContent = UPGRADES.radius.level;
-        // ★★★ lv-autoAim の表示更新を削除しました ★★★
+        document.getElementById('lv-autoAim').textContent = UPGRADES.autoAim.level; // ★★★ 追加 ★★★
 
 
         // スコアがまだ200以上あれば、強化画面を維持して連続強化可能にする
@@ -458,4 +492,3 @@ enemySpawnTimer = 0;
 
 // ゲーム開始
 gameLoop(0);
-
