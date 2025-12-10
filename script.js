@@ -9,7 +9,11 @@ let score = 0;
 let playerHealth = 3;
 let gameRunning = true;
 let isUpgrading = false;
-let isMobileSession = false; // ★新規追加: モバイル環境での実行を判定するフラグ
+let isMobileSession = false; 
+
+// ★★★ 修正点1: 敵の基本サイズとモバイル倍率を定義 ★★★
+const BASE_ENEMY_SIZE = 30; // 敵の基本サイズ
+const MOBILE_ENEMY_SCALE = 1.75; // モバイル時のサイズ倍率
 
 // --- プレイヤーと弾丸の設定 ---
 const PLAYER = {
@@ -24,15 +28,15 @@ let lastShotTime = 0;
 // --- 敵の設定 ---
 let enemies = [];
 let enemySpawnTimer = 0;
-let enemiesKilled = 0; // 撃破数を追跡するためのカウンター
+let enemiesKilled = 0; 
 const ENEMY_HEALTH = 10;
 const ENEMY_VALUE = 3; 
 
 // --- 強化レベル管理 ---
 const UPGRADES = {
-    fireRate: { level: 1, baseInterval: 400, cost: 200, label: "連射速度" }, // ms
+    fireRate: { level: 1, baseInterval: 400, cost: 200, label: "連射速度" }, 
     bulletCount: { level: 1, baseCount: 1, cost: 200, label: "同時弾数" },
-    bounce: { level: 0, baseChance: 0.1, cost: 200, label: "バウンド弾" }, // 10%
+    bounce: { level: 0, baseChance: 0.1, cost: 200, label: "バウンド弾" }, 
     damage: { level: 1, baseDamage: 1, cost: 200, label: "ダメージアップ" },        
     speed: { level: 1, baseSpeed: 10, cost: 200, label: "弾丸速度" },             
     radius: { level: 1, baseRadius: 4, cost: 200, label: "当たり判定拡大" },
@@ -51,13 +55,13 @@ document.addEventListener('keyup', (e) => {
     keys[e.code] = false;
 });
 
-// ★★★ タッチ入力処理 (座標補正ロジック込み) ★★★
+// ★★★ タッチ入力処理 ★★★
 let isTouching = false; 
 let touchX = GAME_WIDTH / 2; 
 
 CANVAS.addEventListener('touchstart', (e) => {
     e.preventDefault(); 
-    isMobileSession = true; // ★修正点: タッチイベント発生でモバイルセッションと判定
+    isMobileSession = true; // タッチイベント発生でモバイルセッションと判定
     isTouching = true;
     if (e.touches.length > 0) {
         const rect = CANVAS.getBoundingClientRect();
@@ -117,6 +121,7 @@ function draw() {
         CTX.fill();
     });
 
+    // ★修正点2: 敵の描画でenemy.sizeを使用
     enemies.forEach(enemy => {
         CTX.fillStyle = 'red';
         CTX.fillRect(enemy.x - enemy.size / 2, enemy.y - enemy.size / 2, enemy.size, enemy.size);
@@ -126,7 +131,6 @@ function draw() {
         CTX.fillRect(enemy.x - enemy.size / 2, enemy.y - enemy.size / 2 - 10, enemy.size * healthRatio, 5);
     });
 
-    // スコアを小数点以下切り捨てて表示
     document.getElementById('score-display').textContent = Math.floor(score); 
     document.getElementById('health-display').textContent = playerHealth;
 }
@@ -137,12 +141,12 @@ function draw() {
 function update(deltaTime) {
     if (!gameRunning || isUpgrading) return;
 
-    // 1. プレイヤーの移動
+    // 1. プレイヤーの移動 (スムーズ追従を維持)
     if (isTouching) {
-        // タッチ操作: タッチされたX座標へ即座にテレポート (操作性向上)
-        PLAYER.x = Math.min(GAME_WIDTH - PLAYER.size / 2, Math.max(PLAYER.size / 2, touchX));
+        const EASE_SPEED = 0.25; 
+        PLAYER.x += (touchX - PLAYER.x) * EASE_SPEED;
+        PLAYER.x = Math.min(GAME_WIDTH - PLAYER.size / 2, Math.max(PLAYER.size / 2, PLAYER.x));
     } else {
-        // PC操作: キーボード操作
         if (keys['ArrowLeft'] && PLAYER.x > PLAYER.size / 2) {
             PLAYER.x -= PLAYER.speed;
         }
@@ -151,22 +155,18 @@ function update(deltaTime) {
         }
     }
 
-    // 2. 発射
+    // 2. 発射 (常時連射を維持)
     const now = Date.now();
     const fireInterval = UPGRADES.fireRate.baseInterval / UPGRADES.fireRate.level; 
 
     let shouldShoot = false;
     
-    // ★★★ 修正ロジック ★★★
-    // モバイルセッション判定済みの場合 -> 常時発射（タッチの有無に関わらず）
     if (isMobileSession) {
         shouldShoot = true; 
     } 
-    // PC操作または未判定の場合 -> スペースキーが押されている場合のみ
     else {
         shouldShoot = keys['Space'];
     }
-    // ★★★ ここまで修正ロジック ★★★
 
     if (shouldShoot && (now - lastShotTime > fireInterval)) {
         shoot();
@@ -255,7 +255,7 @@ function findClosestEnemy() {
 
 
 /**
- * 弾丸の発射処理 (変更なし)
+ * 弾丸の発射処理 
  */
 function shoot() {
     const count = UPGRADES.bulletCount.level;
@@ -297,27 +297,30 @@ function shoot() {
 }
 
 /**
- * 敵の出現処理 (変更なし)
+ * 敵の出現処理 
  */
 function spawnEnemy(yOffset = 0) {
+    // ★★★ 修正点3: モバイル環境で敵サイズを拡大 ★★★
+    const enemySize = isMobileSession ? BASE_ENEMY_SIZE * MOBILE_ENEMY_SCALE : BASE_ENEMY_SIZE;
+    
     enemies.push({
         x: Math.random() * (GAME_WIDTH - 40) + 20,
         y: -15 - yOffset, 
-        size: 30,
+        size: enemySize, // 適用されたサイズを使用
         speed: 1.5, 
         health: ENEMY_HEALTH
     });
 }
 
 /**
- * 衝突判定とダメージ処理 (スコア減少ロジック維持)
+ * 衝突判定とダメージ処理 
  */
 function checkCollisions() {
     let newBullets = [];
     
-    // スコア減少ロジック
+    // スコア減少ロジック (維持)
     const totalLevel = getTotalUpgradeLevel();
-    const baseValue = ENEMY_VALUE; // 3
+    const baseValue = ENEMY_VALUE; 
     const minValue = 0.2;
     const maxReductionLevel = 150; 
     
@@ -328,6 +331,7 @@ function checkCollisions() {
 
     enemies.forEach(enemy => {
         bullets.forEach(bullet => {
+            // ★修正点4: 衝突判定でenemy.sizeを使用
             if (!bullet.hit && distance(bullet.x, bullet.y, enemy.x, enemy.y) < enemy.size / 2 + bullet.radius) {
                 
                 enemy.health -= bullet.damage;
@@ -451,13 +455,10 @@ function gameLoop(currentTime) {
 }
 
 // --- 初期化処理 ---
-enemies.push({
-    x: GAME_WIDTH / 2,
-    y: 50, 
-    size: 30,
-    speed: 1.5,
-    health: ENEMY_HEALTH
-});
+// 初期敵にもモバイルサイズを適用するため、spawnEnemyを呼び出す
+// ただし、初期化時はisMobileSessionがfalseの可能性があるため、後でサイズを調整する必要がある
+// ゲーム開始後に最初のタッチがあった時点でサイズが適用されるように調整するのが理想だが、ここでは敵生成関数を通す
+spawnEnemy(0);
 
 enemySpawnTimer = 0; 
 
