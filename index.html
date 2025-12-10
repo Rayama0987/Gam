@@ -19,18 +19,24 @@
         #game-area {
             position: relative;
             margin-bottom: 20px;
-            /* ★修正点: ゲームエリアを前面近くに設定 */
+            /* ★修正点1: 最大幅を600pxに制限しつつ、画面幅の90%を使用 */
+            max-width: 600px; 
+            width: 90vw; 
             z-index: 5; 
         }
         #game-canvas {
+            /* ★修正点2: 親要素の幅に合わせ、高さを自動調整 */
+            width: 100%;
+            height: auto; 
             border: 2px solid #00ff00;
             display: block;
-            /* ★修正点: Canvasをゲームエリア内で最前面に設定 */
             position: relative;
             z-index: 10; 
         }
         #hud {
-            width: 600px;
+            /* ★修正点3: HUDもゲームエリアの幅に合わせる */
+            max-width: 600px; 
+            width: 90vw; 
             display: flex;
             justify-content: space-between;
             padding: 10px 0;
@@ -44,19 +50,18 @@
             height: 100%;
             background-color: rgba(0, 0, 0, 0.9);
             color: #fff;
-            display: none; /* 初期は非表示 */
+            display: none; 
             flex-direction: column;
             justify-content: center;
             align-items: center;
             padding: 20px;
             box-sizing: border-box;
             text-align: center;
-            /* ★修正点: Canvasより前面に設定 */
-            z-index: 20; 
+            z-index: 20; /* Canvasより前面 */
         }
         .upgrade-button {
             padding: 10px 20px;
-            margin: 8px; /* ボタン間隔を少し狭く */
+            margin: 8px; 
             font-size: 1.1em;
             cursor: pointer;
             background-color: #4CAF50;
@@ -80,8 +85,7 @@
             justify-content: center;
             align-items: center;
             font-size: 2em;
-            /* ★修正点: 全ての上に設定 */
-            z-index: 30; 
+            z-index: 30; /* 最前面 */
         }
     </style>
 </head>
