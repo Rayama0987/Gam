@@ -51,7 +51,7 @@ document.addEventListener('keyup', (e) => {
     keys[e.code] = false;
 });
 
-// ★★★ タッチ入力処理の追加 ★★★
+// ★★★ タッチ入力処理の追加 (座標補正ロジック込み) ★★★
 let isTouching = false; // タッチされているか
 let touchX = GAME_WIDTH / 2; // タッチされたX座標
 
@@ -59,9 +59,12 @@ CANVAS.addEventListener('touchstart', (e) => {
     e.preventDefault(); // ブラウザのデフォルト動作（スクロールなど）を防止
     isTouching = true;
     if (e.touches.length > 0) {
-        // タッチ座標をCanvas座標系に変換
         const rect = CANVAS.getBoundingClientRect();
-        touchX = e.touches[0].clientX - rect.left;
+        // ★修正点1: Canvasの内部解像度(600)と表示サイズ(rect.width)の比率を計算
+        const scaleX = CANVAS.width / rect.width; 
+        
+        // ★修正点2: 表示座標を内部座標に変換してtouchXに格納
+        touchX = (e.touches[0].clientX - rect.left) * scaleX;
     }
 }, { passive: false });
 
@@ -69,7 +72,11 @@ CANVAS.addEventListener('touchmove', (e) => {
     e.preventDefault();
     if (e.touches.length > 0) {
         const rect = CANVAS.getBoundingClientRect();
-        touchX = e.touches[0].clientX - rect.left;
+        // ★修正点1: Canvasの内部解像度(600)と表示サイズ(rect.width)の比率を計算
+        const scaleX = CANVAS.width / rect.width;
+
+        // ★修正点2: 表示座標を内部座標に変換してtouchXに格納
+        touchX = (e.touches[0].clientX - rect.left) * scaleX;
     }
 }, { passive: false });
 
