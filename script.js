@@ -5,7 +5,7 @@ const GAME_WIDTH = CANVAS.width;
 const GAME_HEIGHT = CANVAS.height;
 
 const BASE_SCORE_TO_UPGRADE = 10; 
-let score = 0;
+let score = 0; // 内部スコアは小数点を扱うため、letで定義を維持
 let playerHealth = 3;
 let gameRunning = true;
 let isUpgrading = false;
@@ -25,7 +25,8 @@ let enemies = [];
 let enemySpawnTimer = 0;
 let enemiesKilled = 0; // 撃破数を追跡するためのカウンター
 const ENEMY_HEALTH = 10;
-const ENEMY_VALUE = 3; // 撃破スコア
+// ★変更なし: ベースの最大スコアとして利用
+const ENEMY_VALUE = 3; 
 
 // --- 強化レベル管理 ---
 const UPGRADES = {
@@ -35,7 +36,7 @@ const UPGRADES = {
     damage: { level: 1, baseDamage: 1, cost: 200, label: "ダメージアップ" },        
     speed: { level: 1, baseSpeed: 10, cost: 200, label: "弾丸速度" },             
     radius: { level: 1, baseRadius: 4, cost: 200, label: "当たり判定拡大" },
-    autoAim: { level: 0, baseAimStrength: 0.005, cost: 200, label: "オートエイム" } // 補正の強さ
+    autoAim: { level: 0, baseAimStrength: 0.005, cost: 200, label: "オートエイム" } 
 };
 
 // --- キー入力処理 (PC操作を維持) ---
@@ -50,42 +51,36 @@ document.addEventListener('keyup', (e) => {
     keys[e.code] = false;
 });
 
-// ★★★ タッチ入力処理の追加 (座標補正ロジック込み) ★★★
-let isTouching = false; // タッチされているか
-let touchX = GAME_WIDTH / 2; // タッチされたX座標
+// ★★★ タッチ入力処理 (座標補正ロジック込み) ★★★
+let isTouching = false; 
+let touchX = GAME_WIDTH / 2; 
 
-// タッチ開始時
 CANVAS.addEventListener('touchstart', (e) => {
     e.preventDefault(); 
     isTouching = true;
     if (e.touches.length > 0) {
         const rect = CANVAS.getBoundingClientRect();
-        // Canvasの内部解像度(600)と表示サイズ(rect.width)の比率を計算
+        // 内部解像度と表示サイズの比率を計算
         const scaleX = CANVAS.width / rect.width; 
         
-        // 表示座標を内部座標に変換してtouchXに格納
+        // 表示座標を内部座標に変換
         touchX = (e.touches[0].clientX - rect.left) * scaleX;
     }
 }, { passive: false });
 
-// タッチ移動中
 CANVAS.addEventListener('touchmove', (e) => {
     e.preventDefault();
     if (e.touches.length > 0) {
         const rect = CANVAS.getBoundingClientRect();
-        // Canvasの内部解像度(600)と表示サイズ(rect.width)の比率を計算
         const scaleX = CANVAS.width / rect.width;
-
-        // 表示座標を内部座標に変換してtouchXに格納
         touchX = (e.touches[0].clientX - rect.left) * scaleX;
     }
 }, { passive: false });
 
-// タッチ終了時
 CANVAS.addEventListener('touchend', (e) => {
     isTouching = false;
 }, { passive: false });
-// ★★★ ここまで追加 ★★★
+// ★★★ ここまでタッチ入力 ★★★
 
 // --- ユーティリティ関数 ---
 
@@ -104,7 +99,7 @@ function getTotalUpgradeLevel() {
     for (const key in UPGRADES) {
         total += UPGRADES[key].level;
     }
-    // 基本レベル(1が6項目, 0が2項目)の合計6を引く
+    // 基本レベル(合計6)を引いて、純粋な強化レベルの合計を返す
     return total - 6; 
 }
 
@@ -125,7 +120,7 @@ function draw() {
         if (bullet.isBounce) {
             CTX.fillStyle = 'orange'; 
         } else if (bullet.isAim) {
-            CTX.fillStyle = 'cyan'; // エイム弾は水色
+            CTX.fillStyle = 'cyan'; 
         } else {
             CTX.fillStyle = 'yellow';
         }
@@ -146,7 +141,8 @@ function draw() {
     });
 
     // 5. HUDの更新
-    document.getElementById('score-display').textContent = score;
+    // ★修正点: スコアを小数点以下切り捨てて表示
+    document.getElementById('score-display').textContent = Math.floor(score); 
     document.getElementById('health-display').textContent = playerHealth;
 }
 
@@ -158,7 +154,7 @@ function update(deltaTime) {
 
     // 1. プレイヤーの移動
     if (isTouching) {
-        // タッチ操作: タッチされたX座標へ即座にテレポート (画面内に制限)
+        // タッチ操作: タッチされたX座標へ即座にテレポート (操作性向上)
         PLAYER.x = Math.min(GAME_WIDTH - PLAYER.size / 2, Math.max(PLAYER.size / 2, touchX));
     } else {
         // PC操作: キーボード操作
@@ -171,8 +167,8 @@ function update(deltaTime) {
     }
 
     // 2. 発射
-    // ★★★★ 常時連射ロジック ★★★★
-    if (keys['Space'] || isTouching) { // スペースキーまたはタッチ操作で発射
+    // ★修正点: タッチ操作中(isTouching)またはスペースキーで常時連射
+    if (keys['Space'] || isTouching) { 
         const now = Date.now();
         const fireInterval = UPGRADES.fireRate.baseInterval / UPGRADES.fireRate.level; 
 
@@ -184,25 +180,21 @@ function update(deltaTime) {
 
     // 3. 弾丸の移動
     bullets = bullets.filter(bullet => {
-        // バウンドしていない通常弾の移動 (Y軸のみ)
         if (!bullet.isBounce) {
             bullet.y -= bullet.speed * (deltaTime / 16); 
         }
-        // バウンド弾の移動 (velX, velY を使用)
         else {
             bullet.x += bullet.velX * (deltaTime / 16);
             bullet.y += bullet.velY * (deltaTime / 16);
         }
 
-        // 画面内にいる弾丸だけを残す
         return bullet.y > 0 && bullet.x > 0 && bullet.x < GAME_WIDTH; 
     });
 
-    // 4. 敵の出現
+    // 4. 敵の出現 (変更なし)
     enemySpawnTimer += deltaTime;
     const baseSpawnInterval = 5000; 
     
-    // 総合レベルと撃破数に基づいて難易度を上げる
     const difficultyFactor = (getTotalUpgradeLevel() / 10) + (enemiesKilled / 100);
     const spawnInterval = Math.max(200, baseSpawnInterval - difficultyFactor * 100); 
 
@@ -220,17 +212,15 @@ function update(deltaTime) {
         enemySpawnTimer -= spawnInterval; 
     }
     
-    // 5. 敵の移動
+    // 5. 敵の移動 (変更なし)
     enemies.forEach(enemy => {
         enemy.y += enemy.speed * (deltaTime / 16);
     });
     
-    // 画面外に出た敵の処理 (プレイヤーへのダメージ)
     enemies = enemies.filter(enemy => {
         if (enemy.y < GAME_HEIGHT + enemy.size / 2) {
             return true;
         } else {
-            // 敵が画面下端に到達 = ダメージ
             playerHealth--;
             if (playerHealth <= 0) {
                 gameOver();
@@ -248,7 +238,8 @@ function update(deltaTime) {
     }
 }
 
-// 近くの敵を見つける
+
+// 近くの敵を見つける (変更なし)
 function findClosestEnemy() {
     let closestEnemy = null;
     let minDistance = Infinity;
@@ -261,7 +252,6 @@ function findClosestEnemy() {
         }
     });
 
-    // 画面上部2/3にいる敵のみを対象とする
     if (closestEnemy && closestEnemy.y > GAME_HEIGHT * (2/3)) {
         return null;
     }
@@ -271,7 +261,7 @@ function findClosestEnemy() {
 
 
 /**
- * 弾丸の発射処理 (強化を考慮)
+ * 弾丸の発射処理 (変更なし)
  */
 function shoot() {
     const count = UPGRADES.bulletCount.level;
@@ -280,16 +270,13 @@ function shoot() {
     const currentDamage = UPGRADES.damage.baseDamage * UPGRADES.damage.level;
     const currentRadius = UPGRADES.radius.baseRadius * UPGRADES.radius.level;
     
-    // オートエイムの補正計算
     let aimCorrection = 0;
     let isAiming = false;
     const closestEnemy = findClosestEnemy();
 
     if (closestEnemy && UPGRADES.autoAim.level > 0) {
         isAiming = true;
-        // プレイヤーから敵への目標角度を計算
         const targetAngle = Math.atan2(closestEnemy.x - PLAYER.x, PLAYER.y - closestEnemy.y);
-        // 現在の補正の強さを適用
         aimCorrection = targetAngle * (UPGRADES.autoAim.baseAimStrength * UPGRADES.autoAim.level);
     }
 
@@ -299,7 +286,6 @@ function shoot() {
             angleOffset = (i - (count - 1) / 2) * spreadAngle;
         }
         
-        // オートエイム補正を適用
         const angleRad = (angleOffset * (Math.PI / 180)) - aimCorrection; 
 
         bullets.push({
@@ -309,22 +295,22 @@ function shoot() {
             speed: currentSpeed,
             damage: currentDamage,
             velX: Math.sin(angleRad) * currentSpeed,
-            velY: -Math.cos(angleRad) * currentSpeed, // プレイヤーは上方向 (-Y) に撃つ
+            velY: -Math.cos(angleRad) * currentSpeed, 
             isBounce: false,
-            isAim: isAiming && count === 1 // 単発弾のみエイム色にする
+            isAim: isAiming && count === 1 
         });
     }
 }
 
 /**
- * 敵の出現処理 (Y軸オフセットを追加)
+ * 敵の出現処理 (変更なし)
  */
 function spawnEnemy(yOffset = 0) {
     enemies.push({
         x: Math.random() * (GAME_WIDTH - 40) + 20,
-        y: -15 - yOffset, // 画面上端近くから出現
+        y: -15 - yOffset, 
         size: 30,
-        speed: 1.5, // 安定した移動速度
+        speed: 1.5, 
         health: ENEMY_HEALTH
     });
 }
@@ -334,9 +320,25 @@ function spawnEnemy(yOffset = 0) {
  */
 function checkCollisions() {
     let newBullets = [];
+    
+    // ★★★ 敵撃破時スコア減少ロジック ★★★
+    const totalLevel = getTotalUpgradeLevel();
+    const baseValue = ENEMY_VALUE; // 3
+    const minValue = 0.2;
+    const maxReductionLevel = 150; // 最大削減レベル
+    
+    // 削減率 (総レベルが150を超えても1.0で頭打ち)
+    const reductionFactor = Math.min(1, totalLevel / maxReductionLevel);
+    
+    // 現在の敵撃破時スコアを計算
+    const currentEnemyValue = baseValue - (baseValue - minValue) * reductionFactor;
+    // 確実にminValueを下回らないように保護
+    const finalEnemyValue = Math.max(minValue, currentEnemyValue); 
+    // ★★★ ここまでスコア減少ロジック ★★★
+
+
     enemies.forEach(enemy => {
         bullets.forEach(bullet => {
-            // 衝突判定 (弾丸はヒットフラグを持っていないもののみ判定)
             if (!bullet.hit && distance(bullet.x, bullet.y, enemy.x, enemy.y) < enemy.size / 2 + bullet.radius) {
                 
                 enemy.health -= bullet.damage;
@@ -362,7 +364,7 @@ function checkCollisions() {
                     }
                 }
                 
-                bullet.hit = true; // 弾丸はヒットした
+                bullet.hit = true; 
             }
         });
     });
@@ -370,36 +372,31 @@ function checkCollisions() {
     // 撃破された敵とヒットした弾丸をフィルタリング
     enemies = enemies.filter(enemy => {
         if (enemy.health <= 0) {
-            score += ENEMY_VALUE;
-            enemiesKilled++; // 撃破数をカウント
+            // ★修正点: 計算されたスコアを加算
+            score += finalEnemyValue; 
+            enemiesKilled++; 
             return false;
         }
         return true;
     });
     
-    // ヒットしなかった弾丸と新しく生成されたバウンド弾を結合
     bullets = bullets.filter(bullet => !bullet.hit).concat(newBullets);
 }
 
 /**
- * ゲームオーバー処理
+ * ゲームオーバー処理 (変更なし)
  */
 function gameOver() {
     gameRunning = false;
-    document.getElementById('final-score').textContent = score;
+    document.getElementById('final-score').textContent = Math.floor(score); // スコア表示は整数で
     document.getElementById('game-over-screen').style.display = 'flex';
 }
 
-// --- 強化画面処理 ---
-
-/**
- * 強化画面に移行する
- */
+// --- 強化画面処理 (変更なし) ---
 function enterUpgradeScreen() {
     isUpgrading = true;
-    document.getElementById('upgrade-score').textContent = score;
+    document.getElementById('upgrade-score').textContent = Math.floor(score);
     
-    // 現在のレベル表示を更新
     document.getElementById('lv-fireRate').textContent = UPGRADES.fireRate.level;
     document.getElementById('lv-bulletCount').textContent = UPGRADES.bulletCount.level;
     document.getElementById('lv-bounce').textContent = UPGRADES.bounce.level;
@@ -412,13 +409,10 @@ function enterUpgradeScreen() {
     document.getElementById('upgrade-message').textContent = '';
 }
 
-/**
- * 強化を適用し、スコアが 200 以上なら強化画面を維持する
- */
 window.applyUpgrade = function(type) {
     if (isUpgrading) {
         if (score < BASE_SCORE_TO_UPGRADE) {
-            document.getElementById('upgrade-message').textContent = 'スコアが不足しています。（必要: 200）';
+            document.getElementById('upgrade-message').textContent = 'スコアが不足しています。（必要: 10）';
             return;
         }
 
@@ -428,11 +422,9 @@ window.applyUpgrade = function(type) {
         document.getElementById('upgrade-message').textContent = 
             `${UPGRADES[type].label}がレベル ${UPGRADES[type].level} に強化されました！`;
 
-        // スコア表示を更新
-        document.getElementById('score-display').textContent = score;
-        document.getElementById('upgrade-score').textContent = score;
+        document.getElementById('score-display').textContent = Math.floor(score);
+        document.getElementById('upgrade-score').textContent = Math.floor(score);
 
-        // 強化レベル表示を再度更新
         document.getElementById('lv-fireRate').textContent = UPGRADES.fireRate.level;
         document.getElementById('lv-bulletCount').textContent = UPGRADES.bulletCount.level;
         document.getElementById('lv-bounce').textContent = UPGRADES.bounce.level;
@@ -442,11 +434,9 @@ window.applyUpgrade = function(type) {
         document.getElementById('lv-autoAim').textContent = UPGRADES.autoAim.level; 
 
 
-        // スコアがまだ200以上あれば、強化画面を維持して連続強化可能にする
         if (score >= BASE_SCORE_TO_UPGRADE) {
             document.getElementById('upgrade-message').textContent += ' さらに強化できます。';
         } else {
-             // 200スコア未満になったらゲーム画面に戻る
             isUpgrading = false;
             document.getElementById('upgrade-screen').style.display = 'none';
         }
@@ -457,13 +447,11 @@ window.applyUpgrade = function(type) {
 // --- メインゲームループ ---
 let lastTime = 0;
 function gameLoop(currentTime) {
-    // deltaTimeが大きくなりすぎないように制限
     if (lastTime === 0) {
         lastTime = currentTime;
     }
     
     let deltaTime = currentTime - lastTime;
-    // 最大 250ms に制限
     if (deltaTime > 250) {
         deltaTime = 250; 
     }
@@ -476,16 +464,14 @@ function gameLoop(currentTime) {
 }
 
 // --- 初期化処理 ---
-// ゲーム開始直後、敵を1体だけ画面上部に強制的に配置する
 enemies.push({
     x: GAME_WIDTH / 2,
-    y: 50, // Y=50 (画面上部) に直接配置し、すぐに見えるようにする
+    y: 50, 
     size: 30,
     speed: 1.5,
     health: ENEMY_HEALTH
 });
 
-// 💡 修正: 強制配置したため、タイマーをリセットしてすぐに次の敵が出ないようにする 💡
 enemySpawnTimer = 0; 
 
 // ゲーム開始
