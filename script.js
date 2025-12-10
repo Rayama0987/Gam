@@ -35,11 +35,10 @@ const UPGRADES = {
     damage: { level: 1, baseDamage: 1, cost: 200, label: "ダメージアップ" },        
     speed: { level: 1, baseSpeed: 10, cost: 200, label: "弾丸速度" },             
     radius: { level: 1, baseRadius: 4, cost: 200, label: "当たり判定拡大" },
-    // ★★★ 新しい強化項目を追加 ★★★
     autoAim: { level: 0, baseAimStrength: 0.005, cost: 200, label: "オートエイム" } // 補正の強さ
 };
 
-// --- キー入力処理 ---
+// --- キー入力処理 (PC操作を維持) ---
 let keys = {};
 document.addEventListener('keydown', (e) => {
     keys[e.code] = true;
@@ -55,31 +54,34 @@ document.addEventListener('keyup', (e) => {
 let isTouching = false; // タッチされているか
 let touchX = GAME_WIDTH / 2; // タッチされたX座標
 
+// タッチ開始時
 CANVAS.addEventListener('touchstart', (e) => {
-    e.preventDefault(); // ブラウザのデフォルト動作（スクロールなど）を防止
+    e.preventDefault(); 
     isTouching = true;
     if (e.touches.length > 0) {
         const rect = CANVAS.getBoundingClientRect();
-        // ★修正点1: Canvasの内部解像度(600)と表示サイズ(rect.width)の比率を計算
+        // Canvasの内部解像度(600)と表示サイズ(rect.width)の比率を計算
         const scaleX = CANVAS.width / rect.width; 
         
-        // ★修正点2: 表示座標を内部座標に変換してtouchXに格納
+        // 表示座標を内部座標に変換してtouchXに格納
         touchX = (e.touches[0].clientX - rect.left) * scaleX;
     }
 }, { passive: false });
 
+// タッチ移動中
 CANVAS.addEventListener('touchmove', (e) => {
     e.preventDefault();
     if (e.touches.length > 0) {
         const rect = CANVAS.getBoundingClientRect();
-        // ★修正点1: Canvasの内部解像度(600)と表示サイズ(rect.width)の比率を計算
+        // Canvasの内部解像度(600)と表示サイズ(rect.width)の比率を計算
         const scaleX = CANVAS.width / rect.width;
 
-        // ★修正点2: 表示座標を内部座標に変換してtouchXに格納
+        // 表示座標を内部座標に変換してtouchXに格納
         touchX = (e.touches[0].clientX - rect.left) * scaleX;
     }
 }, { passive: false });
 
+// タッチ終了時
 CANVAS.addEventListener('touchend', (e) => {
     isTouching = false;
 }, { passive: false });
@@ -155,12 +157,11 @@ function update(deltaTime) {
     if (!gameRunning || isUpgrading) return;
 
     // 1. プレイヤーの移動
-    // ★★★ タッチ操作による移動ロジックを追加・変更 ★★★
     if (isTouching) {
-        // タッチされたX座標へ即座にテレポート (画面内に制限)
+        // タッチ操作: タッチされたX座標へ即座にテレポート (画面内に制限)
         PLAYER.x = Math.min(GAME_WIDTH - PLAYER.size / 2, Math.max(PLAYER.size / 2, touchX));
     } else {
-        // キーボード操作 (タッチ操作がない場合のみ)
+        // PC操作: キーボード操作
         if (keys['ArrowLeft'] && PLAYER.x > PLAYER.size / 2) {
             PLAYER.x -= PLAYER.speed;
         }
@@ -168,10 +169,9 @@ function update(deltaTime) {
             PLAYER.x += PLAYER.speed;
         }
     }
-    // ★★★ ここまで変更 ★★★
 
     // 2. 発射
-    // ★★★ タッチ操作中は常に発射するロジックに変更 ★★★
+    // ★★★★ 常時連射ロジック ★★★★
     if (keys['Space'] || isTouching) { // スペースキーまたはタッチ操作で発射
         const now = Date.now();
         const fireInterval = UPGRADES.fireRate.baseInterval / UPGRADES.fireRate.level; 
@@ -181,7 +181,6 @@ function update(deltaTime) {
             lastShotTime = now;
         }
     }
-    // ★★★ ここまで変更 ★★★
 
     // 3. 弾丸の移動
     bullets = bullets.filter(bullet => {
@@ -201,31 +200,24 @@ function update(deltaTime) {
 
     // 4. 敵の出現
     enemySpawnTimer += deltaTime;
-    const baseSpawnInterval = 5000; // 1秒間隔を基本とする
+    const baseSpawnInterval = 5000; 
     
-    // ★★★ 敵の出現間隔を徐々に短縮するロジックを修正 ★★★
     // 総合レベルと撃破数に基づいて難易度を上げる
     const difficultyFactor = (getTotalUpgradeLevel() / 10) + (enemiesKilled / 100);
-    // 最小間隔を 200ms とし、難易度に応じて間隔を短縮
     const spawnInterval = Math.max(200, baseSpawnInterval - difficultyFactor * 100); 
 
-    // whileループに変更: 経過時間に応じて敵の出現処理を確実に実行
     while (enemySpawnTimer >= spawnInterval) {
         
-        // ★★★ 敵の出現数を徐々に増やすロジックを修正 ★★★
-        // 総合レベルと撃破数に基づいて出現数を増やす
         let numEnemiesToSpawn = 1 + Math.floor(difficultyFactor / 5);
-        // 最低でも1体は出現するように保証
         if (numEnemiesToSpawn < 1) {
             numEnemiesToSpawn = 1; 
         }
 
         for(let i = 0; i < numEnemiesToSpawn; i++){
-            // Y軸オフセットを使って、少しずらして出現させる
             spawnEnemy(i * 60); 
         }
 
-        enemySpawnTimer -= spawnInterval; // 経過した時間分をタイマーから引く
+        enemySpawnTimer -= spawnInterval; 
     }
     
     // 5. 敵の移動
