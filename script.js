@@ -6,7 +6,7 @@ const GAME_HEIGHT = CANVAS.height;
 
 const BASE_SCORE_TO_UPGRADE = 10; 
 let score = 0; 
-let playerHealth = 3;
+let playerHealth = 5;
 let gameRunning = true;
 let isUpgrading = false;
 let isMobileSession = false; 
@@ -459,3 +459,4 @@ enemySpawnTimer = 0;
 
 // ゲーム開始
 gameLoop(0);
+
