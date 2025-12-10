@@ -19,13 +19,13 @@
         #game-area {
             position: relative;
             margin-bottom: 20px;
-            /* ★修正点1: 最大幅を600pxに制限しつつ、画面幅の90%を使用 */
+            /* ★修正点: 最大幅を600pxに制限しつつ、画面幅の90%を使用 */
             max-width: 600px; 
             width: 90vw; 
             z-index: 5; 
         }
         #game-canvas {
-            /* ★修正点2: 親要素の幅に合わせ、高さを自動調整 */
+            /* ★修正点: 親要素の幅に合わせ、高さを自動調整 */
             width: 100%;
             height: auto; 
             border: 2px solid #00ff00;
@@ -34,7 +34,7 @@
             z-index: 10; 
         }
         #hud {
-            /* ★修正点3: HUDもゲームエリアの幅に合わせる */
+            /* ★修正点: HUDもゲームエリアの幅に合わせる */
             max-width: 600px; 
             width: 90vw; 
             display: flex;
@@ -57,7 +57,7 @@
             padding: 20px;
             box-sizing: border-box;
             text-align: center;
-            z-index: 20; /* Canvasより前面 */
+            z-index: 20; 
         }
         .upgrade-button {
             padding: 10px 20px;
@@ -85,7 +85,7 @@
             justify-content: center;
             align-items: center;
             font-size: 2em;
-            z-index: 30; /* 最前面 */
+            z-index: 30; 
         }
     </style>
 </head>
