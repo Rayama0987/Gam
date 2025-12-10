@@ -5,10 +5,11 @@ const GAME_WIDTH = CANVAS.width;
 const GAME_HEIGHT = CANVAS.height;
 
 const BASE_SCORE_TO_UPGRADE = 10; 
-let score = 0; // 内部スコアは小数点を扱うため、letで定義を維持
+let score = 0; 
 let playerHealth = 3;
 let gameRunning = true;
 let isUpgrading = false;
+let isMobileSession = false; // ★新規追加: モバイル環境での実行を判定するフラグ
 
 // --- プレイヤーと弾丸の設定 ---
 const PLAYER = {
@@ -25,7 +26,6 @@ let enemies = [];
 let enemySpawnTimer = 0;
 let enemiesKilled = 0; // 撃破数を追跡するためのカウンター
 const ENEMY_HEALTH = 10;
-// ★変更なし: ベースの最大スコアとして利用
 const ENEMY_VALUE = 3; 
 
 // --- 強化レベル管理 ---
@@ -57,13 +57,11 @@ let touchX = GAME_WIDTH / 2;
 
 CANVAS.addEventListener('touchstart', (e) => {
     e.preventDefault(); 
+    isMobileSession = true; // ★修正点: タッチイベント発生でモバイルセッションと判定
     isTouching = true;
     if (e.touches.length > 0) {
         const rect = CANVAS.getBoundingClientRect();
-        // 内部解像度と表示サイズの比率を計算
         const scaleX = CANVAS.width / rect.width; 
-        
-        // 表示座標を内部座標に変換
         touchX = (e.touches[0].clientX - rect.left) * scaleX;
     }
 }, { passive: false });
@@ -84,22 +82,15 @@ CANVAS.addEventListener('touchend', (e) => {
 
 // --- ユーティリティ関数 ---
 
-/**
- * 2点間の距離を計算する
- */
 function distance(x1, y1, x2, y2) {
     return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
 }
 
-/**
- * すべての強化レベルの合計を計算する
- */
 function getTotalUpgradeLevel() {
     let total = 0;
     for (const key in UPGRADES) {
         total += UPGRADES[key].level;
     }
-    // 基本レベル(合計6)を引いて、純粋な強化レベルの合計を返す
     return total - 6; 
 }
 
@@ -107,15 +98,12 @@ function getTotalUpgradeLevel() {
  * 描画
  */
 function draw() {
-    // 1. 背景をクリア
     CTX.fillStyle = '#000';
     CTX.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-    // 2. プレイヤーの描画
     CTX.fillStyle = 'lime';
     CTX.fillRect(PLAYER.x - PLAYER.size / 2, PLAYER.y - PLAYER.size / 2, PLAYER.size, PLAYER.size);
 
-    // 3. 弾丸の描画
     bullets.forEach(bullet => {
         if (bullet.isBounce) {
             CTX.fillStyle = 'orange'; 
@@ -129,19 +117,16 @@ function draw() {
         CTX.fill();
     });
 
-    // 4. 敵の描画
     enemies.forEach(enemy => {
         CTX.fillStyle = 'red';
         CTX.fillRect(enemy.x - enemy.size / 2, enemy.y - enemy.size / 2, enemy.size, enemy.size);
         
-        // ヘルスバーを描画
         const healthRatio = enemy.health / ENEMY_HEALTH;
         CTX.fillStyle = 'green';
         CTX.fillRect(enemy.x - enemy.size / 2, enemy.y - enemy.size / 2 - 10, enemy.size * healthRatio, 5);
     });
 
-    // 5. HUDの更新
-    // ★修正点: スコアを小数点以下切り捨てて表示
+    // スコアを小数点以下切り捨てて表示
     document.getElementById('score-display').textContent = Math.floor(score); 
     document.getElementById('health-display').textContent = playerHealth;
 }
@@ -167,18 +152,28 @@ function update(deltaTime) {
     }
 
     // 2. 発射
-    // ★修正点: タッチ操作中(isTouching)またはスペースキーで常時連射
-    if (keys['Space'] || isTouching) { 
-        const now = Date.now();
-        const fireInterval = UPGRADES.fireRate.baseInterval / UPGRADES.fireRate.level; 
+    const now = Date.now();
+    const fireInterval = UPGRADES.fireRate.baseInterval / UPGRADES.fireRate.level; 
 
-        if (now - lastShotTime > fireInterval) {
-            shoot();
-            lastShotTime = now;
-        }
+    let shouldShoot = false;
+    
+    // ★★★ 修正ロジック ★★★
+    // モバイルセッション判定済みの場合 -> 常時発射（タッチの有無に関わらず）
+    if (isMobileSession) {
+        shouldShoot = true; 
+    } 
+    // PC操作または未判定の場合 -> スペースキーが押されている場合のみ
+    else {
+        shouldShoot = keys['Space'];
+    }
+    // ★★★ ここまで修正ロジック ★★★
+
+    if (shouldShoot && (now - lastShotTime > fireInterval)) {
+        shoot();
+        lastShotTime = now;
     }
 
-    // 3. 弾丸の移動
+    // 3. 弾丸の移動 (変更なし)
     bullets = bullets.filter(bullet => {
         if (!bullet.isBounce) {
             bullet.y -= bullet.speed * (deltaTime / 16); 
@@ -239,7 +234,6 @@ function update(deltaTime) {
 }
 
 
-// 近くの敵を見つける (変更なし)
 function findClosestEnemy() {
     let closestEnemy = null;
     let minDistance = Infinity;
@@ -316,25 +310,20 @@ function spawnEnemy(yOffset = 0) {
 }
 
 /**
- * 衝突判定とダメージ処理
+ * 衝突判定とダメージ処理 (スコア減少ロジック維持)
  */
 function checkCollisions() {
     let newBullets = [];
     
-    // ★★★ 敵撃破時スコア減少ロジック ★★★
+    // スコア減少ロジック
     const totalLevel = getTotalUpgradeLevel();
     const baseValue = ENEMY_VALUE; // 3
     const minValue = 0.2;
-    const maxReductionLevel = 150; // 最大削減レベル
+    const maxReductionLevel = 150; 
     
-    // 削減率 (総レベルが150を超えても1.0で頭打ち)
     const reductionFactor = Math.min(1, totalLevel / maxReductionLevel);
-    
-    // 現在の敵撃破時スコアを計算
     const currentEnemyValue = baseValue - (baseValue - minValue) * reductionFactor;
-    // 確実にminValueを下回らないように保護
     const finalEnemyValue = Math.max(minValue, currentEnemyValue); 
-    // ★★★ ここまでスコア減少ロジック ★★★
 
 
     enemies.forEach(enemy => {
@@ -369,10 +358,8 @@ function checkCollisions() {
         });
     });
 
-    // 撃破された敵とヒットした弾丸をフィルタリング
     enemies = enemies.filter(enemy => {
         if (enemy.health <= 0) {
-            // ★修正点: 計算されたスコアを加算
             score += finalEnemyValue; 
             enemiesKilled++; 
             return false;
@@ -384,11 +371,11 @@ function checkCollisions() {
 }
 
 /**
- * ゲームオーバー処理 (変更なし)
+ * ゲームオーバー処理 
  */
 function gameOver() {
     gameRunning = false;
-    document.getElementById('final-score').textContent = Math.floor(score); // スコア表示は整数で
+    document.getElementById('final-score').textContent = Math.floor(score); 
     document.getElementById('game-over-screen').style.display = 'flex';
 }
 
