@@ -320,7 +320,7 @@ function checkCollisions() {
     // スコア減少ロジック (維持)
     const totalLevel = getTotalUpgradeLevel();
     const baseValue = ENEMY_VALUE; 
-    const minValue = 0.2;
+    const minValue = 0.002;
     const maxReductionLevel = 150; 
     
     const reductionFactor = Math.min(1, totalLevel / maxReductionLevel);
@@ -459,4 +459,5 @@ enemySpawnTimer = 0;
 
 // ゲーム開始
 gameLoop(0);
+
 
