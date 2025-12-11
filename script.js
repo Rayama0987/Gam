@@ -6,6 +6,9 @@ const GAME_HEIGHT = CANVAS.height;
 
 const BASE_SCORE_TO_UPGRADE = 10; 
 let score = 0; 
+// ★修正点: 消費されない総獲得スコアを追跡する変数を追加
+let totalScoreEarned = 0; 
+
 let playerHealth = 5;
 let gameRunning = true;
 let isUpgrading = false;
@@ -363,6 +366,8 @@ function checkCollisions() {
     enemies = enemies.filter(enemy => {
         if (enemy.health <= 0) {
             score += finalEnemyValue; 
+            // ★修正点: 倒した時のポイントを総獲得スコアにも加算する
+            totalScoreEarned += finalEnemyValue; 
             enemiesKilled++; 
             return false;
         }
@@ -377,7 +382,8 @@ function checkCollisions() {
  */
 function gameOver() {
     gameRunning = false;
-    document.getElementById('final-score').textContent = Math.floor(score); 
+    // ★修正点: 最終スコアとして totalScoreEarned を表示する
+    document.getElementById('final-score').textContent = Math.floor(totalScoreEarned); 
     document.getElementById('game-over-screen').style.display = 'flex';
 }
 
