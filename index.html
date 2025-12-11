@@ -19,13 +19,11 @@
         #game-area {
             position: relative;
             margin-bottom: 20px;
-            /* ★修正点: 最大幅を600pxに制限しつつ、画面幅の90%を使用 */
             max-width: 600px; 
             width: 90vw; 
             z-index: 5; 
         }
         #game-canvas {
-            /* ★修正点: 親要素の幅に合わせ、高さを自動調整 */
             width: 100%;
             height: auto; 
             border: 2px solid #00ff00;
@@ -34,13 +32,14 @@
             z-index: 10; 
         }
         #hud {
-            /* ★修正点: HUDもゲームエリアの幅に合わせる */
             max-width: 600px; 
             width: 90vw; 
             display: flex;
             justify-content: space-between;
             padding: 10px 0;
             font-size: 1.2em;
+            /* ★修正点: マルチプレイヤーHUDのため縦に並べる */
+            flex-direction: column; 
         }
         #upgrade-screen {
             position: absolute;
@@ -87,20 +86,66 @@
             font-size: 2em;
             z-index: 30; 
         }
-        /* ★追加: スコアを横並びにするためのスタイル */
         #final-score-container {
             display: flex;
             align-items: center;
-            margin-top: -10px; /* 上の要素との間隔を詰める */
+            margin-top: -10px;
             font-size: 1.2em;
         }
         #final-score-container p {
             margin: 5px 15px;
         }
         #final-score-value {
-            font-size: 1.8em; /* スコア値のみ大きく */
+            font-size: 1.8em; 
             font-weight: bold;
             color: yellow;
+        }
+        
+        /* ★追加: マルチプレイヤーHUD表示用スタイル */
+        .player-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 5px;
+            padding: 5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .player-info:last-child {
+            border-bottom: none;
+        }
+
+        /* ★追加: ロビー画面スタイル */
+        #lobby-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95);
+            color: #fff;
+            display: none; 
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+            text-align: center;
+            z-index: 40; 
+        }
+        #lobby-screen input {
+            padding: 10px;
+            margin: 5px;
+            width: 80%;
+            max-width: 300px;
+            border: 1px solid #4CAF50;
+            background: #333;
+            color: #fff;
+            border-radius: 5px;
+        }
+        .lobby-status {
+            margin-top: 15px;
+            font-size: 0.8em;
+            color: #ccc;
         }
     </style>
 </head>
@@ -115,51 +160,56 @@
             <p>アップグレードを選択してください:</p>
 
             <div id="upgrade-buttons-container">
-                <button class="upgrade-button" onclick="applyUpgrade('damage')">
-                    ダメージアップ (現在のLv: <span id="lv-damage">1</span>)
-                </button>
-                <button class="upgrade-button" onclick="applyUpgrade('speed')">
-                    弾丸速度上昇 (現在のLv: <span id="lv-speed">1</span>)
-                </button>
-                <button class="upgrade-button" onclick="applyUpgrade('radius')">
-                    当たり判定拡大 (現在のLv: <span id="lv-radius">1</span>)
-                </button>
-                <br>
-                <button class="upgrade-button" onclick="applyUpgrade('fireRate')">
-                    連射速度上昇 (現在のLv: <span id="lv-fireRate">1</span>)
-                </button>
-                <button class="upgrade-button" onclick="applyUpgrade('bulletCount')">
-                    一発の弾数上昇 (現在のLv: <span id="lv-bulletCount">1</span>)
-                </button>
-                <button class="upgrade-button" onclick="applyUpgrade('bounce')">
-                    バウンド確率上昇 (現在のLv: <span id="lv-bounce">0</span>)
-                </button>
-                <br>
-                <button class="upgrade-button" onclick="applyUpgrade('autoAim')">
-                    オートエイム (現在のLv: <span id="lv-autoAim">0</span>)
-                </button>
-            </div>
+                </div>
             
             <p id="upgrade-message" style="margin-top: 20px; color: yellow;"></p>
         </div>
 
         <div id="game-over-screen">
             <h2>ゲームオーバー！</h2>
-            
             <div id="final-score-container">
                 <p>最終スコア:</p>
                 <p id="final-score-value"><span id="final-score">0</span></p>
             </div>
-            
             <button onclick="window.location.reload()" class="upgrade-button">リトライ</button>
         </div>
+        
+        <div id="lobby-screen">
+            <h2>パーティモード ロビー</h2>
+            
+            <button class="upgrade-button" onclick="window.startSinglePlayer()">シングルプレイに戻る</button>
+            <hr style="width: 50%; margin: 20px 0; border-color: #555;">
+
+            <h3>ルームに入る/作成</h3>
+            <input type="text" id="room-name" placeholder="部屋名 (必須)">
+            <input type="password" id="room-password" placeholder="パスワード (任意)">
+            
+            <button class="upgrade-button" onclick="window.createOrJoinRoom(true)">
+                ルーム作成 (ホスト)
+            </button>
+            <button class="upgrade-button" onclick="window.createOrJoinRoom(false)">
+                ルーム参加
+            </button>
+            
+            <div class="lobby-status">現在の参加者: <span id="lobby-player-count">0</span>/4</div>
+            <p id="lobby-message" style="color: yellow; margin-top: 10px;"></p>
+
+            <button class="upgrade-button" id="start-multi-game-button" style="display: none; background-color: darkred; margin-top: 20px;" onclick="window.startGame()">
+                ゲーム開始 (ホストのみ)
+            </button>
+        </div>
+
     </div>
 
     <div id="hud">
-        <span>スコア: <span id="score-display">0</span></span>
-        <span>体力: <span id="health-display">3</span></span>
+        <div id="player-stats-container">
+            </div>
+        
+        <button class="upgrade-button" style="background-color: #333; margin-top: 10px;" onclick="window.showLobby()">
+            パーティーモード
+        </button>
     </div>
 
-    <script src="script.js"></script>
+    <script src="multiplayer.js"></script>
 </body>
 </html>
