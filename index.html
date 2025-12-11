@@ -87,6 +87,21 @@
             font-size: 2em;
             z-index: 30; 
         }
+        /* ★追加: スコアを横並びにするためのスタイル */
+        #final-score-container {
+            display: flex;
+            align-items: center;
+            margin-top: -10px; /* 上の要素との間隔を詰める */
+            font-size: 1.2em;
+        }
+        #final-score-container p {
+            margin: 5px 15px;
+        }
+        #final-score-value {
+            font-size: 1.8em; /* スコア値のみ大きく */
+            font-weight: bold;
+            color: yellow;
+        }
     </style>
 </head>
 <body>
@@ -130,8 +145,12 @@
 
         <div id="game-over-screen">
             <h2>ゲームオーバー！</h2>
-            <p style="font-size: 0.5em;">あなたの最終スコア:</p>
-            <p style="font-size: 1.5em; font-weight: bold; color: yellow;"><span id="final-score">0</span></p>
+            
+            <div id="final-score-container">
+                <p>最終スコア:</p>
+                <p id="final-score-value"><span id="final-score">0</span></p>
+            </div>
+            
             <button onclick="window.location.reload()" class="upgrade-button">リトライ</button>
         </div>
     </div>
@@ -144,4 +163,3 @@
     <script src="script.js"></script>
 </body>
 </html>
-
