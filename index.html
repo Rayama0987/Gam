@@ -38,7 +38,6 @@
             justify-content: space-between;
             padding: 10px 0;
             font-size: 1.2em;
-            /* ★修正点: マルチプレイヤーHUDのため縦に並べる */
             flex-direction: column; 
         }
         #upgrade-screen {
@@ -101,20 +100,7 @@
             color: yellow;
         }
         
-        /* ★追加: マルチプレイヤーHUD表示用スタイル */
-        .player-info {
-            display: flex;
-            justify-content: space-between;
-            width: 100%;
-            margin-bottom: 5px;
-            padding: 5px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .player-info:last-child {
-            border-bottom: none;
-        }
-
-        /* ★追加: ロビー画面スタイル */
+        /* ロビー画面スタイル */
         #lobby-screen {
             position: absolute;
             top: 0;
@@ -147,6 +133,18 @@
             font-size: 0.8em;
             color: #ccc;
         }
+        /* マルチプレイヤーHUD表示用スタイル */
+        .player-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 5px;
+            padding: 5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .player-info:last-child {
+            border-bottom: none;
+        }
     </style>
 </head>
 <body>
@@ -175,12 +173,14 @@
         </div>
         
         <div id="lobby-screen">
-            <h2>パーティモード ロビー</h2>
+            <h2>モード選択 / パーティモード ロビー</h2>
             
-            <button class="upgrade-button" onclick="window.startSinglePlayer()">シングルプレイに戻る</button>
+            <button class="upgrade-button" onclick="window.startSinglePlayer()">
+                シングルプレイヤー開始
+            </button>
             <hr style="width: 50%; margin: 20px 0; border-color: #555;">
 
-            <h3>ルームに入る/作成</h3>
+            <h3>パーティモード (ローカル協力プレイ)</h3>
             <input type="text" id="room-name" placeholder="部屋名 (必須)">
             <input type="password" id="room-password" placeholder="パスワード (任意)">
             
@@ -204,12 +204,8 @@
     <div id="hud">
         <div id="player-stats-container">
             </div>
-        
-        <button class="upgrade-button" style="background-color: #333; margin-top: 10px;" onclick="window.showLobby()">
-            パーティーモード
-        </button>
     </div>
 
-    <script src="multiplayer.js"></script>
+    <script src="game.js"></script>
 </body>
 </html>
