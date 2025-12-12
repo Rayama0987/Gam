@@ -19,11 +19,13 @@
         #game-area {
             position: relative;
             margin-bottom: 20px;
+            /* ★修正点: 最大幅を600pxに制限しつつ、画面幅の90%を使用 */
             max-width: 600px; 
             width: 90vw; 
             z-index: 5; 
         }
         #game-canvas {
+            /* ★修正点: 親要素の幅に合わせ、高さを自動調整 */
             width: 100%;
             height: auto; 
             border: 2px solid #00ff00;
@@ -32,6 +34,7 @@
             z-index: 10; 
         }
         #hud {
+            /* ★修正点: HUDもゲームエリアの幅に合わせる */
             max-width: 600px; 
             width: 90vw; 
             display: flex;
@@ -39,69 +42,6 @@
             padding: 10px 0;
             font-size: 1.2em;
         }
-        
-        /* ★修正/追加: ロビー画面のスタイル */
-        #lobby-screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.95); 
-            color: #fff;
-            display: none; 
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            box-sizing: border-box;
-            text-align: center;
-            z-index: 40; 
-        }
-
-        #lobby-screen h2 {
-            font-size: 2.5em; 
-            color: #00ff00; 
-            margin-bottom: 30px;
-            text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
-        }
-
-        .lobby-input {
-            padding: 10px;
-            margin-bottom: 15px;
-            border: 2px solid #00bcd4;
-            border-radius: 5px;
-            width: 70%;
-            max-width: 300px;
-            background-color: #333;
-            color: #fff;
-            font-size: 1.1em;
-            text-align: center;
-        }
-
-        .lobby-button-group {
-            margin: 15px 0;
-        }
-        
-        .lobby-divider {
-            width: 80%;
-            margin: 25px 0;
-            border: 0;
-            border-top: 1px solid #555;
-        }
-
-        #lobby-message {
-            margin-top: 15px;
-            font-size: 1.1em;
-            color: #ffeb3b; /* 注意喚起の色 */
-        }
-
-        #lobby-player-count-area {
-            margin-top: 15px;
-            font-size: 1.1em;
-        }
-        /* ロビー画面のスタイルここまで */
-
         #upgrade-screen {
             position: absolute;
             top: 0;
@@ -151,22 +91,18 @@
 </head>
 <body>
     <div id="game-area">
-        <div id="lobby-screen">
-            <h2>ロビー</h2>
-            
-            <button class="upgrade-button" onclick="window.startSinglePlayer()">シングルプレイ開始</button>
-            
-            <div class="lobby-divider"></div>
-            
+        <div id="lobby-screen" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.9); color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 40; text-align: center;">
+            <h2>ロビー</h2> <button class="upgrade-button" onclick="window.startSinglePlayer()">シングルプレイ開始</button>
+            <hr style="width: 80%; margin: 20px 0;">
             <h3>パーティルームに参加 / 作成</h3>
-            <input type="text" id="room-name" class="lobby-input" placeholder="部屋名を入力">
-            <div class="lobby-button-group">
+            <input type="text" id="room-name" placeholder="部屋名を入力" style="padding: 8px; margin-bottom: 10px;">
+            <div>
                 <button class="upgrade-button" style="background-color: #3f51b5;" onclick="window.createOrJoinRoom(true)">ルーム作成 (ホスト)</button>
                 <button class="upgrade-button" style="background-color: #00bcd4;" onclick="window.createOrJoinRoom(false)">ルーム参加</button>
             </div>
-            <p id="lobby-message">モードを選択するか、パーティルームを作成してください。</p>
-            <p id="lobby-player-count-area">現在の参加プレイヤー数: <span id="lobby-player-count">1</span></p>
-            <button id="start-multi-game-button" class="upgrade-button" style="background-color: #ff9800; margin-top: 20px; display: none;" onclick="window.startGame()">マルチプレイ開始</button>
+            <p id="lobby-message" style="margin-top: 15px;">モードを選択するか、パーティルームを作成してください。</p>
+            <p style="margin-top: 5px;">現在の参加プレイヤー数: <span id="lobby-player-count">1</span></p>
+            <button id="start-multi-game-button" class="upgrade-button" style="background-color: #ff9800; margin-top: 15px; display: none;" onclick="window.startGame()">マルチプレイ開始</button>
         </div>
 
         <canvas id="game-canvas" width="600" height="700"></canvas>
@@ -214,10 +150,10 @@
     </div>
 
     <div id="hud">
-        <div id="player-stats-container">
-            </div>
+        <span>スコア: <span id="score-display">0</span></span>
+        <span>体力: <span id="health-display">3</span></span>
     </div>
 
-    <script src="game.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
