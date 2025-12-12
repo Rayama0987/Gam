@@ -16,7 +16,7 @@ let isUpgrading = false;
 let isMobileSession = false; 
 let isMultiplayer = false; 
 let lastTime = 0; 
-let localPlayerId = 0; // この端末が操作するプレイヤーID
+let localPlayerId = 0; 
 
 // ★オンライン対応のため、ゲーム状態全体を管理する単一オブジェクト
 let gameState = {
@@ -27,13 +27,11 @@ let gameState = {
 
 // --- プレイヤーと操作キー (オンライン専用: 1端末につき1プレイヤー) ---
 const PLAYER_COLORS = ['lime', 'cyan', 'red', 'yellow']; 
-
-// ★修正: ローカルマルチ用の複数のキー設定を削除し、共通のキーセットに統一
 const STANDARD_KEYS = { LEFT: 'KeyA', RIGHT: 'KeyD', SHOOT: 'Space' }; 
 
 let keys = {}; // 現在押されているキー
 
-// プレイヤーの基本構造 (変更なし)
+// プレイヤーの基本構造 
 function createPlayer(id, color) {
     const baseCost = BASE_SCORE_TO_UPGRADE;
     return {
@@ -65,7 +63,6 @@ function createPlayer(id, color) {
 // --- イベントリスナー (キー入力、タッチ入力) ---
 document.addEventListener('keydown', (e) => {
     keys[e.code] = true;
-    // どのプレイヤーが接続していても、WASD/Spaceのキーコードをチェックするだけで十分
     if (e.code === STANDARD_KEYS.SHOOT) {
         e.preventDefault(); 
     }
@@ -102,12 +99,10 @@ CANVAS.addEventListener('touchend', (e) => {
 }, { passive: false });
 
 
-// --- ユーティリティ関数 ---
-
+// --- ユーティリティ関数 (省略) ---
 function distance(x1, y1, x2, y2) {
     return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
 }
-
 function getTotalUpgradeLevel(player) {
     let total = 0;
     for (const key in player.upgrades) {
@@ -117,19 +112,15 @@ function getTotalUpgradeLevel(player) {
 }
 
 
-// --- ネットワーク層のシミュレーション（前回のコードを維持） ---
+// --- ネットワーク層のシミュレーション ---
 
-/**
- * サーバー通信を抽象化したオブジェクト。
- * 実際のオンライン接続では、Socket.IOなどのライブラリに置き換えられます。
- */
 const Networking = {
     isConnected: false,
     isHost: false,
-    latency: 50, // 模擬的な遅延 (ms)
+    latency: 50, 
     
     inputQueue: [], 
-    serverStateQueue: [],
+    serverStateQueue: [], // サーバーが状態を送るべきクライアントIDのリスト
 
     connect: function(isHost) {
         this.isConnected = true;
@@ -137,30 +128,20 @@ const Networking = {
         console.log(`[NETWORKING] ${isHost ? 'ホスト' : 'クライアント'}として接続をシミュレート...`);
     },
 
-    /**
-     * ローカルの入力状態をサーバーに送信する処理をシミュレート
-     */
     sendInput: function(input) {
         if (!this.isConnected) return;
         
-        // シミュレーション: 自身がホストの場合、即座に入力キューに追加
         if (this.isHost) {
-            // ホストは自身の入力を直接適用
             this.inputQueue.push({ playerId: localPlayerId, input: input });
         } else {
-             // 実際のオンラインではサーバーに送る。今回はシミュレーションのため、クライアントからの入力を無視
-             // ★本来はここで WebSocket.send(input) を行う
+             // 実際のオンラインではサーバーに送る
         }
     },
 
-    /**
-     * サーバーからのゲーム状態を受信した際に呼び出される処理をシミュレート
-     */
     receiveState: function(state) {
         setTimeout(() => {
             gameState = state;
             
-            // 強化画面のトリガーはローカルで実行
             const player = gameState.players.find(p => p.id === localPlayerId);
             if(player){
                 if (!isUpgrading && player.health > 0 && player.score >= BASE_SCORE_TO_UPGRADE) {
@@ -170,20 +151,15 @@ const Networking = {
         }, this.latency);
     },
 
-    /**
-     * ★ホスト側のみが実行する、サーバーのゲームロジックシミュレーション
-     */
     simulateServerTick: function(deltaTime) {
         if (!this.isHost || !gameRunning || isUpgrading) return;
         
-        // 1. 全プレイヤーの入力を適用 (入力キューを処理)
+        // 1. 全プレイヤーの入力を適用
         this.inputQueue.forEach(packet => {
             const player = gameState.players.find(p => p.id === packet.playerId);
             if (player) {
-                // 移動入力 or 強化イベントを適用
                 if (packet.input.upgraded) {
-                    // 強化イベント処理 (簡略化のため、サーバー側でのロジック適用をスキップ)
-                    // 実際はサーバー側で強化イベントを処理し、gameStateを更新する必要がある
+                    // 強化イベント処理 (簡略化)
                 } else {
                     player.input = packet.input;
                 }
@@ -215,7 +191,6 @@ const Networking = {
 
             // 弾丸の移動
             player.bullets = player.bullets.filter(bullet => {
-                // 弾丸の位置更新
                 if (!bullet.isBounce) {
                     bullet.y -= bullet.speed * (deltaTime / 16); 
                 } else {
@@ -226,20 +201,17 @@ const Networking = {
             });
         });
         
-        // 敵の出現（ホストのみが実行）
+        // 敵の出現、移動、衝突判定、ダメージ処理 (省略)
         if (gameState.enemiesKilled % 100 === 0 && gameState.enemies.length === 0) {
             serverSpawnEnemy(0);
         }
         
-        // 敵の移動（ホストのみが実行）
         gameState.enemies.forEach(enemy => {
             enemy.y += enemy.speed * (deltaTime / 16);
         });
         
-        // 衝突判定とスコア処理（ホストのみが実行）
         serverCheckCollisions();
 
-        // 敵の落下ダメージ処理（ホストのみが実行）
         gameState.enemies = gameState.enemies.filter(enemy => {
             if (enemy.y < GAME_HEIGHT + enemy.size / 2) {
                 return true;
@@ -255,7 +227,6 @@ const Networking = {
             }
         });
         
-        // 全員死亡時のゲームオーバーチェック
         if (gameState.players.filter(p => p.health > 0).length === 0) {
             gameOver();
             return;
@@ -263,7 +234,6 @@ const Networking = {
 
         // 3. 状態を他のクライアントにブロードキャスト（シミュレーション）
         this.serverStateQueue.forEach((id) => {
-             // 実際のコード: io.to(id).emit('gameState', gameState);
              if (id !== localPlayerId) {
                 Networking.receiveState(JSON.parse(JSON.stringify(gameState)));
              }
@@ -274,10 +244,8 @@ const Networking = {
     }
 };
 
-// --- ホスト/サーバー側のゲームロジック（変更なし） ---
-
+// --- ホスト/サーバー側のゲームロジック (省略) ---
 function serverShoot(player) {
-    // ... (前回のコードを維持) ...
     const { upgrades } = player;
     const count = upgrades.bulletCount.level;
     const currentSpeed = upgrades.speed.baseSpeed * upgrades.speed.level;
@@ -285,7 +253,6 @@ function serverShoot(player) {
     const currentRadius = upgrades.radius.baseRadius * upgrades.radius.level;
     
     for (let i = 0; i < count; i++) {
-        // 簡易化のため、真っ直ぐ上に撃つ
         player.bullets.push({
             x: player.x,
             y: player.y,
@@ -302,7 +269,6 @@ function serverShoot(player) {
 }
 
 function serverCheckCollisions() {
-    // ... (前回のコードを維持) ...
     const p1 = gameState.players.find(p => p.id === 0);
     const totalLevel = p1 ? getTotalUpgradeLevel(p1) : 0;
     const finalEnemyValue = ENEMY_VALUE; 
@@ -311,12 +277,7 @@ function serverCheckCollisions() {
         gameState.players.forEach(player => {
             player.bullets.forEach(bullet => {
                 if (distance(bullet.x, bullet.y, enemy.x, enemy.y) < enemy.size / 2 + bullet.radius) {
-                    
                     enemy.health -= bullet.damage;
-                    
-                    // バウンド処理（ホストで実行）
-                    // ... (バウンド弾生成ロジックは省略) ...
-                    
                     bullet.hit = true;
                     enemy.lastHitBulletOwnerId = player.id; 
                 }
@@ -324,21 +285,17 @@ function serverCheckCollisions() {
         });
     });
 
-    // 敵の排除とスコア加算 (総スコア制維持)
     gameState.enemies = gameState.enemies.filter(enemy => {
         if (enemy.health <= 0) {
             const killerId = enemy.lastHitBulletOwnerId;
-
             if (killerId !== undefined) {
                 gameState.players.forEach(p => {
                     let scoreMultiplier = (p.id === killerId) ? 1.0 : 0.5; 
-                    
                     const earnedScore = finalEnemyValue * scoreMultiplier;
                     p.score += earnedScore;
                     p.totalScoreEarned += earnedScore; 
                 });
             }
-
             gameState.enemiesKilled++; 
             return false;
         }
@@ -362,20 +319,18 @@ function serverSpawnEnemy(yOffset = 0) {
 }
 
 
-// --- クライアント側の描画と入力処理 ---
+// --- クライアント側の描画と入力処理 (省略) ---
 
 function draw() {
     CTX.fillStyle = '#000';
     CTX.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-    // プレイヤーの描画 (gameStateから)
     gameState.players.forEach(player => {
         if (player.health <= 0) return;
         CTX.fillStyle = player.color;
         CTX.fillRect(player.x - player.size / 2, player.y - player.size / 2, player.size, player.size);
     });
 
-    // 弾丸の描画 (gameStateから)
     gameState.players.forEach(player => {
         player.bullets.forEach(bullet => {
             CTX.fillStyle = player.color; 
@@ -385,7 +340,6 @@ function draw() {
         });
     });
 
-    // 敵の描画 (gameStateから)
     gameState.enemies.forEach(enemy => {
         CTX.fillStyle = 'red';
         CTX.fillRect(enemy.x - enemy.size / 2, enemy.y - enemy.size / 2, enemy.size, enemy.size);
@@ -397,13 +351,9 @@ function draw() {
     updateHUD();
 }
 
-/**
- * クライアント側の入力状態収集と送信
- */
 function collectAndSendInput() {
     if (!gameRunning || isUpgrading || localPlayerId === undefined) return;
     
-    // ★修正: どのプレイヤーIDであっても、この端末では STANDARD_KEYS のみを使用
     const playerKeys = STANDARD_KEYS; 
     
     let inputState = {
@@ -412,12 +362,10 @@ function collectAndSendInput() {
         shoot: keys[playerKeys.SHOOT] || false
     };
     
-    // モバイルタッチ操作（タッチしている間は移動＆射撃ONとする簡易ロジック）
+    // モバイルタッチ操作
     if (isMobileSession) {
-        // タッチしている間は射撃をON
         inputState.shoot = isTouching;
         
-        // 左右の移動入力シミュレーション (タッチ位置で移動)
         const player = gameState.players.find(p => p.id === localPlayerId);
         if (player && isTouching) {
             const center = player.x;
@@ -435,12 +383,11 @@ function collectAndSendInput() {
         }
     }
 
-    // 入力データをサーバーに送信（シミュレーション）
     Networking.sendInput(inputState);
 }
 
 
-// --- ゲームオーバー処理と強化画面（変更なし） ---
+// --- ゲームオーバー処理と強化画面 (省略) ---
 
 function updateHUD() {
     const container = document.getElementById('player-stats-container');
@@ -449,9 +396,7 @@ function updateHUD() {
     gameState.players.forEach(player => {
         const playerDiv = document.createElement('div');
         playerDiv.className = 'player-info';
-        
         let statusColor = player.health <= 0 ? 'gray' : player.color;
-        
         const playerLabel = isMultiplayer ? `P${player.id + 1} (${player.color})` : `プレイヤー`;
 
         playerDiv.innerHTML = `
@@ -459,7 +404,6 @@ function updateHUD() {
             <span style="color: ${statusColor};">スコア: ${Math.floor(player.score)}</span>
             <span style="color: ${statusColor};">体力: ${player.health}</span>
         `;
-        
         container.appendChild(playerDiv);
     });
 }
@@ -555,8 +499,6 @@ window.applyUpgrade = function(type) {
             }
         }
         
-        // ★重要: サーバーに強化結果を送信する（シミュレーション）
-        // 実際はサーバー側でスコアとレベルの更新が必要
         Networking.sendInput({ upgraded: true, type: type, playerId: playerId, score: player.score, level: player.upgrades[type]?.level });
         
         document.getElementById('upgrade-score').textContent = Math.floor(player.score);
@@ -597,6 +539,12 @@ window.createOrJoinRoom = function(isHost) {
     const roomName = document.getElementById('room-name').value;
     if (!roomName) return;
 
+    // 既に接続済みかチェック (シミュレーションのため、プレイヤーIDを基準にチェック)
+    if (Networking.isConnected && gameState.players.some(p => p.id === localPlayerId)) {
+         document.getElementById('lobby-message').textContent = `あなたは既に P${localPlayerId + 1} として参加しています。`;
+         return;
+    }
+
     Networking.connect(isHost); 
     isMultiplayer = true;
     
@@ -608,21 +556,27 @@ window.createOrJoinRoom = function(isHost) {
         document.getElementById('start-multi-game-button').style.display = 'block';
         document.getElementById('lobby-message').textContent = `「${roomName}」を作成しました。 (P1: ${PLAYER_COLORS[0]})`;
     } else {
-        // ★シミュレーション: P1が作成済みと仮定し、自分をP2以降として追加
-        if (gameState.players.length === 0) { 
-            gameState.players.push(createPlayer(0, PLAYER_COLORS[0]));
-        }
+        // ★修正ポイント: 参加者はローカルでP1を作成しない。
+        // サーバーから渡されるべき現在のプレイヤーリストをシミュレーション上で利用する。
         
-        const newPlayerId = gameState.players.length;
+        // プレイヤーIDの決定 (現在の最大ID + 1)
+        const currentMaxId = gameState.players.reduce((max, p) => Math.max(max, p.id), -1);
+        const newPlayerId = currentMaxId + 1;
+
         if (newPlayerId >= 4) {
              document.getElementById('lobby-message').textContent = '満員です。最大4人までです。';
+             // 接続状態もリセット
+             Networking.isConnected = false;
              return;
         }
         
         const newPlayer = createPlayer(newPlayerId, PLAYER_COLORS[newPlayerId]);
-        gameState.players.push(newPlayer);
+        gameState.players.push(newPlayer); // シミュレーション上、ローカルのリストに追加
         localPlayerId = newPlayerId; 
+        
+        // サーバーに自分のIDをブロードキャスト先として登録
         Networking.serverStateQueue.push(newPlayerId); 
+        
         document.getElementById('start-multi-game-button').style.display = 'none'; 
         document.getElementById('lobby-message').textContent = 
             `「${roomName}」に参加しました。 (P${newPlayerId + 1}: ${PLAYER_COLORS[newPlayerId]})`;
@@ -668,13 +622,10 @@ function gameLoop(currentTime) {
     lastTime = currentTime;
 
     if (gameRunning) {
-        // 1. クライアントからの入力を収集し、ネットワークに送信
         collectAndSendInput();
         
-        // 2. ホスト側でサーバーロジックを実行し、全員に状態を同期
         Networking.simulateServerTick(deltaTime);
         
-        // 3. クライアント側では状態を描画するだけ
         draw();
     } else {
         updateHUD(); 
