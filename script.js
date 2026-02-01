@@ -4,16 +4,15 @@ const CTX = CANVAS.getContext('2d');
 const GAME_WIDTH = CANVAS.width;
 const GAME_HEIGHT = CANVAS.height;
 
-const BASE_SCORE_TO_UPGRADE = 10; 
-let score = 0; 
+const BASE_SCORE_TO_UPGRADE = 10;
+let score = 0;
 let playerHealth = 5;
 let gameRunning = true;
 let isUpgrading = false;
-let isMobileSession = false; 
+let isMobileSession = false;
 
-// ★★★ 修正点: モバイル時のサイズ倍率を 1.5 に変更 ★★★
-const BASE_ENEMY_SIZE = 30; // 敵の基本サイズ
-const MOBILE_ENEMY_SCALE = 1.5; // モバイル時のサイズ倍率
+const BASE_ENEMY_SIZE = 30;
+const MOBILE_ENEMY_SCALE = 1.5;
 
 // --- プレイヤーと弾丸の設定 ---
 const PLAYER = {
@@ -28,9 +27,9 @@ let lastShotTime = 0;
 // --- 敵の設定 ---
 let enemies = [];
 let enemySpawnTimer = 0;
-let enemiesKilled = 0; 
+let enemiesKilled = 0;
 const ENEMY_HEALTH = 10;
-const ENEMY_VALUE = 3; 
+const ENEMY_VALUE = 3;
 
 // --- 強化レベル管理 ---
 const UPGRADES = {
@@ -43,7 +42,7 @@ const UPGRADES = {
     autoAim: { level: 0, baseAimStrength: 0.005, cost: 200, label: "オートエイム" } 
 };
 
-// --- キー入力処理 (PC操作を維持) ---
+// --- キー入力処理 ---
 let keys = {};
 document.addEventListener('keydown', (e) => {
     keys[e.code] = true;
@@ -55,7 +54,7 @@ document.addEventListener('keyup', (e) => {
     keys[e.code] = false;
 });
 
-// ★★★ タッチ入力処理 ★★★
+// --- タッチ入力処理 ---
 let isTouching = false; 
 let touchX = GAME_WIDTH / 2; 
 
@@ -82,10 +81,8 @@ CANVAS.addEventListener('touchmove', (e) => {
 CANVAS.addEventListener('touchend', (e) => {
     isTouching = false;
 }, { passive: false });
-// ★★★ ここまでタッチ入力 ★★★
 
 // --- ユーティリティ関数 ---
-
 function distance(x1, y1, x2, y2) {
     return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
 }
@@ -140,7 +137,7 @@ function draw() {
 function update(deltaTime) {
     if (!gameRunning || isUpgrading) return;
 
-    // 1. プレイヤーの移動 (スムーズ追従を維持)
+    // 1. プレイヤーの移動
     if (isTouching) {
         const EASE_SPEED = 0.25; 
         PLAYER.x += (touchX - PLAYER.x) * EASE_SPEED;
@@ -154,59 +151,52 @@ function update(deltaTime) {
         }
     }
 
-    // 2. 発射 (常時連射を維持)
+    // 2. 発射
     const now = Date.now();
     const fireInterval = UPGRADES.fireRate.baseInterval / UPGRADES.fireRate.level; 
 
-    let shouldShoot = false;
-    
-    if (isMobileSession) {
-        shouldShoot = true; 
-    } 
-    else {
-        shouldShoot = keys['Space'];
-    }
+    let shouldShoot = isMobileSession ? true : keys['Space'];
 
     if (shouldShoot && (now - lastShotTime > fireInterval)) {
         shoot();
         lastShotTime = now;
     }
 
-    // 3. 弾丸の移動 (変更なし)
+    // 3. 弾丸の移動
     bullets = bullets.filter(bullet => {
         if (!bullet.isBounce) {
             bullet.y -= bullet.speed * (deltaTime / 16); 
-        }
-        else {
+        } else {
             bullet.x += bullet.velX * (deltaTime / 16);
             bullet.y += bullet.velY * (deltaTime / 16);
         }
-
         return bullet.y > 0 && bullet.x > 0 && bullet.x < GAME_WIDTH; 
     });
 
-    // 4. 敵の出現 (変更なし)
+    // 4. 敵の出現 (上限設定あり)
     enemySpawnTimer += deltaTime;
     const baseSpawnInterval = 5000; 
-    
     const difficultyFactor = (getTotalUpgradeLevel() / 10) + (enemiesKilled / 100);
-    const spawnInterval = Math.max(200, baseSpawnInterval - difficultyFactor * 100); 
+    
+    // スポーン間隔の下限を 500ms に制限
+    const spawnInterval = Math.max(500, baseSpawnInterval - difficultyFactor * 100); 
+    const MAX_ENEMIES_ON_SCREEN = 20;
 
     while (enemySpawnTimer >= spawnInterval) {
-        
-        let numEnemiesToSpawn = 1 + Math.floor(difficultyFactor / 5);
-        if (numEnemiesToSpawn < 1) {
-            numEnemiesToSpawn = 1; 
-        }
+        if (enemies.length < MAX_ENEMIES_ON_SCREEN) {
+            // 一度のスポーン上限を 3体 に制限
+            let numEnemiesToSpawn = Math.min(1 + Math.floor(difficultyFactor / 5), 3);
 
-        for(let i = 0; i < numEnemiesToSpawn; i++){
-            spawnEnemy(i * 60); 
+            for(let i = 0; i < numEnemiesToSpawn; i++){
+                if (enemies.length < MAX_ENEMIES_ON_SCREEN) {
+                    spawnEnemy(i * 60); 
+                }
+            }
         }
-
         enemySpawnTimer -= spawnInterval; 
     }
     
-    // 5. 敵の移動 (変更なし)
+    // 5. 敵の移動
     enemies.forEach(enemy => {
         enemy.y += enemy.speed * (deltaTime / 16);
     });
@@ -216,9 +206,7 @@ function update(deltaTime) {
             return true;
         } else {
             playerHealth--;
-            if (playerHealth <= 0) {
-                gameOver();
-            }
+            if (playerHealth <= 0) gameOver();
             return false;
         }
     });
@@ -245,16 +233,13 @@ function findClosestEnemy() {
         }
     });
 
-    if (closestEnemy && closestEnemy.y > GAME_HEIGHT * (2/3)) {
-        return null;
-    }
-
+    if (closestEnemy && closestEnemy.y > GAME_HEIGHT * (2/3)) return null;
     return closestEnemy;
 }
 
 
 /**
- * 弾丸の発射処理 
+ * 弾丸の発射処理
  */
 function shoot() {
     const count = UPGRADES.bulletCount.level;
@@ -274,11 +259,7 @@ function shoot() {
     }
 
     for (let i = 0; i < count; i++) {
-        let angleOffset = 0;
-        if (count > 1) {
-            angleOffset = (i - (count - 1) / 2) * spreadAngle;
-        }
-        
+        let angleOffset = count > 1 ? (i - (count - 1) / 2) * spreadAngle : 0;
         const angleRad = (angleOffset * (Math.PI / 180)) - aimCorrection; 
 
         bullets.push({
@@ -296,12 +277,10 @@ function shoot() {
 }
 
 /**
- * 敵の出現処理 
+ * 敵の出現処理
  */
 function spawnEnemy(yOffset = 0) {
-    // モバイル環境で敵サイズを拡大 (1.5倍)
     const enemySize = isMobileSession ? BASE_ENEMY_SIZE * MOBILE_ENEMY_SCALE : BASE_ENEMY_SIZE;
-    
     enemies.push({
         x: Math.random() * (GAME_WIDTH - 40) + 20,
         y: -15 - yOffset, 
@@ -312,12 +291,10 @@ function spawnEnemy(yOffset = 0) {
 }
 
 /**
- * 衝突判定とダメージ処理 
+ * 衝突判定とダメージ処理
  */
 function checkCollisions() {
     let newBullets = [];
-    
-    // スコア減少ロジック (維持)
     const totalLevel = getTotalUpgradeLevel();
     const baseValue = ENEMY_VALUE; 
     const minValue = 0.002;
@@ -327,34 +304,18 @@ function checkCollisions() {
     const currentEnemyValue = baseValue - (baseValue - minValue) * reductionFactor;
     const finalEnemyValue = Math.max(minValue, currentEnemyValue); 
 
-
     enemies.forEach(enemy => {
         bullets.forEach(bullet => {
             if (!bullet.hit && distance(bullet.x, bullet.y, enemy.x, enemy.y) < enemy.size / 2 + bullet.radius) {
-                
                 enemy.health -= bullet.damage;
-                
-                // バウンド処理の適用
                 if (!bullet.isBounce && Math.random() < UPGRADES.bounce.level * UPGRADES.bounce.baseChance) {
-                    
-                    for (let i = 0; i < 1; i++) { 
-                        const bounceAngle = Math.random() * Math.PI * 2; 
-                        const bounceDamage = bullet.damage / 3;
-                        const bounceSpeed = bullet.speed * 0.8; 
-                        
-                        newBullets.push({
-                            x: bullet.x,
-                            y: bullet.y,
-                            radius: 3,
-                            speed: bounceSpeed,
-                            damage: bounceDamage, 
-                            velX: Math.sin(bounceAngle) * bounceSpeed,
-                            velY: Math.cos(bounceAngle) * bounceSpeed, 
-                            isBounce: true 
-                        });
-                    }
+                    const bounceAngle = Math.random() * Math.PI * 2; 
+                    newBullets.push({
+                        x: bullet.x, y: bullet.y, radius: 3, speed: bullet.speed * 0.8,
+                        damage: bullet.damage / 3, velX: Math.sin(bounceAngle) * (bullet.speed * 0.8),
+                        velY: Math.cos(bounceAngle) * (bullet.speed * 0.8), isBounce: true 
+                    });
                 }
-                
                 bullet.hit = true; 
             }
         });
@@ -368,12 +329,11 @@ function checkCollisions() {
         }
         return true;
     });
-    
     bullets = bullets.filter(bullet => !bullet.hit).concat(newBullets);
 }
 
 /**
- * ゲームオーバー処理 
+ * ゲームオーバー処理
  */
 function gameOver() {
     gameRunning = false;
@@ -385,15 +345,8 @@ function gameOver() {
 function enterUpgradeScreen() {
     isUpgrading = true;
     document.getElementById('upgrade-score').textContent = Math.floor(score);
-    
-    document.getElementById('lv-fireRate').textContent = UPGRADES.fireRate.level;
-    document.getElementById('lv-bulletCount').textContent = UPGRADES.bulletCount.level;
-    document.getElementById('lv-bounce').textContent = UPGRADES.bounce.level;
-    document.getElementById('lv-damage').textContent = UPGRADES.damage.level;
-    document.getElementById('lv-speed').textContent = UPGRADES.speed.level;
-    document.getElementById('lv-radius').textContent = UPGRADES.radius.level;
-    document.getElementById('lv-autoAim').textContent = UPGRADES.autoAim.level; 
-
+    const list = ['fireRate', 'bulletCount', 'bounce', 'damage', 'speed', 'radius', 'autoAim'];
+    list.forEach(id => document.getElementById(`lv-${id}`).textContent = UPGRADES[id].level);
     document.getElementById('upgrade-screen').style.display = 'flex';
     document.getElementById('upgrade-message').textContent = '';
 }
@@ -404,24 +357,12 @@ window.applyUpgrade = function(type) {
             document.getElementById('upgrade-message').textContent = 'スコアが不足しています。（必要: 10）';
             return;
         }
-
         UPGRADES[type].level++;
         score -= BASE_SCORE_TO_UPGRADE; 
-        
-        document.getElementById('upgrade-message').textContent = 
-            `${UPGRADES[type].label}がレベル ${UPGRADES[type].level} に強化されました！`;
-
+        document.getElementById('upgrade-message').textContent = `${UPGRADES[type].label}がLv ${UPGRADES[type].level} になりました！`;
         document.getElementById('score-display').textContent = Math.floor(score);
         document.getElementById('upgrade-score').textContent = Math.floor(score);
-
-        document.getElementById('lv-fireRate').textContent = UPGRADES.fireRate.level;
-        document.getElementById('lv-bulletCount').textContent = UPGRADES.bulletCount.level;
-        document.getElementById('lv-bounce').textContent = UPGRADES.bounce.level;
-        document.getElementById('lv-damage').textContent = UPGRADES.damage.level;
-        document.getElementById('lv-speed').textContent = UPGRADES.speed.level;
-        document.getElementById('lv-radius').textContent = UPGRADES.radius.level;
-        document.getElementById('lv-autoAim').textContent = UPGRADES.autoAim.level; 
-
+        document.getElementById(`lv-${type}`).textContent = UPGRADES[type].level;
 
         if (score >= BASE_SCORE_TO_UPGRADE) {
             document.getElementById('upgrade-message').textContent += ' さらに強化できます。';
@@ -432,30 +373,16 @@ window.applyUpgrade = function(type) {
     }
 };
 
-
-// --- メインゲームループ ---
 let lastTime = 0;
 function gameLoop(currentTime) {
-    if (lastTime === 0) {
-        lastTime = currentTime;
-    }
-    
-    let deltaTime = currentTime - lastTime;
-    if (deltaTime > 250) {
-        deltaTime = 250; 
-    }
+    if (lastTime === 0) lastTime = currentTime;
+    let deltaTime = Math.min(currentTime - lastTime, 250);
     lastTime = currentTime;
-
     update(deltaTime);
     draw();
-
     requestAnimationFrame(gameLoop);
 }
 
-// --- 初期化処理 ---
 spawnEnemy(0);
-
 enemySpawnTimer = 0; 
-
-// ゲーム開始
 gameLoop(0);
