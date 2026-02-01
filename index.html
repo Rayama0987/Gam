@@ -3,17 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CUBE STRIKER - Steam Edition</title>
+    <title>強化シューティングゲーム</title>
     <style>
-        body { display: flex; justify-content: center; align-items: center; flex-direction: column; background-color: #1a1a1a; color: #fff; font-family: Arial, sans-serif; margin: 0; min-height: 100vh; }
-        #game-area { position: relative; max-width: 600px; width: 90vw; z-index: 5; }
-        #game-canvas { width: 100%; height: auto; border: 2px solid #0f0; display: block; position: relative; z-index: 10; background: #000; }
-        #hud { max-width: 600px; width: 90vw; display: flex; justify-content: space-between; padding: 10px 0; font-size: 1.2em; font-weight: bold; color: #0f0; }
-        #upgrade-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.9); display: none; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; z-index: 20; }
-        .upgrade-button { padding: 12px 20px; margin: 8px; font-size: 1em; cursor: pointer; background-color: #222; border: 2px solid #0f0; color: #0f0; border-radius: 5px; transition: 0.3s; width: 250px; }
-        .upgrade-button:hover:not(:disabled) { background-color: #0f0; color: #000; }
-        .upgrade-button:disabled { border-color: #444; color: #444; cursor: not-allowed; }
-        #game-over-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(150, 0, 0, 0.8); display: none; flex-direction: column; justify-content: center; align-items: center; font-size: 2em; z-index: 30; }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            background-color: #222;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            min-height: 100vh;
+        }
+        #game-area {
+            position: relative;
+            margin-bottom: 20px;
+            max-width: 600px; 
+            width: 90vw; 
+            z-index: 5; 
+        }
+        #game-canvas {
+            width: 100%;
+            height: auto; 
+            border: 2px solid #00ff00;
+            display: block;
+            position: relative;
+            z-index: 10; 
+        }
+        #hud {
+            max-width: 600px; 
+            width: 90vw; 
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            font-size: 1.2em;
+        }
+        #upgrade-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            display: none; 
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+            text-align: center;
+            z-index: 20; 
+        }
+        .upgrade-button {
+            padding: 10px 20px;
+            margin: 8px; 
+            font-size: 1.1em;
+            cursor: pointer;
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .upgrade-button:hover {
+            background-color: #45a049;
+        }
+        #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(150, 0, 0, 0.8);
+            color: #fff;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 2em;
+            z-index: 30; 
+        }
     </style>
 </head>
 <body>
@@ -21,33 +91,50 @@
         <canvas id="game-canvas" width="600" height="700"></canvas>
         
         <div id="upgrade-screen">
-            <h2 style="color: #0f0;">SYSTEM UPGRADE</h2>
-            <p>SCORE: <span id="upgrade-score">0</span></p>
+            <h2>✨ 強化タイム ✨</h2>
+            <p>現在のスコア: <span id="upgrade-score">0</span></p>
+            <p>強化コスト: 10 スコア</p>
+            <p>アップグレードを選択してください:</p>
+
             <div id="upgrade-buttons-container">
-                <button class="upgrade-button" onclick="window.applyUpgrade('damage')">攻撃力 Lv:<span id="lv-damage">1</span></button>
-                <button class="upgrade-button" onclick="window.applyUpgrade('speed')">弾速 Lv:<span id="lv-speed">1</span></button>
-                <button id="btn-radius" class="upgrade-button" onclick="window.applyUpgrade('radius')">判定拡大 Lv:<span id="lv-radius">1</span> (MAX 10)</button>
+                <button class="upgrade-button" onclick="window.applyUpgrade('damage')">
+                    ダメージアップ (現在のLv: <span id="lv-damage">1</span>)
+                </button>
+                <button class="upgrade-button" onclick="window.applyUpgrade('speed')">
+                    弾丸速度上昇 (現在のLv: <span id="lv-speed">1</span>)
+                </button>
+                <button class="upgrade-button" onclick="window.applyUpgrade('radius')">
+                    当たり判定拡大 (現在のLv: <span id="lv-radius">1</span>)
+                </button>
                 <br>
-                <button class="upgrade-button" onclick="window.applyUpgrade('fireRate')">連射 Lv:<span id="lv-fireRate">1</span></button>
-                <button class="upgrade-button" onclick="window.applyUpgrade('bulletCount')">弾数 Lv:<span id="lv-bulletCount">1</span></button>
-                <button class="upgrade-button" onclick="window.applyUpgrade('bounce')">跳弾 Lv:<span id="lv-bounce">0</span></button>
+                <button class="upgrade-button" onclick="window.applyUpgrade('fireRate')">
+                    連射速度上昇 (現在のLv: <span id="lv-fireRate">1</span>)
+                </button>
+                <button class="upgrade-button" onclick="window.applyUpgrade('bulletCount')">
+                    一発の弾数上昇 (現在のLv: <span id="lv-bulletCount">1</span>)
+                </button>
+                <button class="upgrade-button" onclick="window.applyUpgrade('bounce')">
+                    バウンド確率上昇 (現在のLv: <span id="lv-bounce">0</span>)
+                </button>
                 <br>
-                <button class="upgrade-button" onclick="window.applyUpgrade('autoAim')">自動照準 Lv:<span id="lv-autoAim">0</span></button>
+                <button class="upgrade-button" onclick="window.applyUpgrade('autoAim')">
+                    オートエイム (現在のLv: <span id="lv-autoAim">0</span>)
+                </button>
             </div>
-            <button class="upgrade-button" style="background:#444; border:none; color:#fff; margin-top:30px;" onclick="closeUpgrade()">RESUME</button>
-            <p id="upgrade-message" style="margin-top: 20px; color: yellow; min-height: 1.2em;"></p>
+            
+            <p id="upgrade-message" style="margin-top: 20px; color: yellow;"></p>
         </div>
 
         <div id="game-over-screen">
-            GAME OVER
-            <p style="font-size: 0.5em;">FINAL SCORE: <span id="final-score">0</span></p>
-            <button onclick="window.location.reload()" class="upgrade-button">RETRY</button>
+            ゲームオーバー！
+            <p style="font-size: 0.5em;">最終スコア: <span id="final-score">0</span></p>
+            <button onclick="window.location.reload()" class="upgrade-button">リトライ</button>
         </div>
     </div>
 
     <div id="hud">
-        <span>SCORE: <span id="score-display">0</span></span>
-        <span>HP: <span id="health-display">5</span></span>
+        <span>スコア: <span id="score-display">0</span></span>
+        <span>体力: <span id="health-display">5</span></span>
     </div>
 
     <script src="script.js"></script>
