@@ -66,8 +66,13 @@
             border-radius: 5px;
             transition: background-color 0.3s;
         }
-        .upgrade-button:hover {
+        .upgrade-button:hover:not(:disabled) {
             background-color: #45a049;
+        }
+        .upgrade-button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+            color: #aaa;
         }
         #game-over-screen {
             position: absolute;
@@ -87,56 +92,4 @@
     </style>
 </head>
 <body>
-    <div id="game-area">
-        <canvas id="game-canvas" width="600" height="700"></canvas>
-        
-        <div id="upgrade-screen">
-            <h2>✨ 強化タイム ✨</h2>
-            <p>現在のスコア: <span id="upgrade-score">0</span></p>
-            <p>強化コスト: 10 スコア</p>
-            <p>アップグレードを選択してください:</p>
-
-            <div id="upgrade-buttons-container">
-                <button class="upgrade-button" onclick="window.applyUpgrade('damage')">
-                    ダメージアップ (現在のLv: <span id="lv-damage">1</span>)
-                </button>
-                <button class="upgrade-button" onclick="window.applyUpgrade('speed')">
-                    弾丸速度上昇 (現在のLv: <span id="lv-speed">1</span>)
-                </button>
-                <button class="upgrade-button" onclick="window.applyUpgrade('radius')">
-                    当たり判定拡大 (現在のLv: <span id="lv-radius">1</span>)
-                </button>
-                <br>
-                <button class="upgrade-button" onclick="window.applyUpgrade('fireRate')">
-                    連射速度上昇 (現在のLv: <span id="lv-fireRate">1</span>)
-                </button>
-                <button class="upgrade-button" onclick="window.applyUpgrade('bulletCount')">
-                    一発の弾数上昇 (現在のLv: <span id="lv-bulletCount">1</span>)
-                </button>
-                <button class="upgrade-button" onclick="window.applyUpgrade('bounce')">
-                    バウンド確率上昇 (現在のLv: <span id="lv-bounce">0</span>)
-                </button>
-                <br>
-                <button class="upgrade-button" onclick="window.applyUpgrade('autoAim')">
-                    オートエイム (現在のLv: <span id="lv-autoAim">0</span>)
-                </button>
-            </div>
-            
-            <p id="upgrade-message" style="margin-top: 20px; color: yellow;"></p>
-        </div>
-
-        <div id="game-over-screen">
-            ゲームオーバー！
-            <p style="font-size: 0.5em;">最終スコア: <span id="final-score">0</span></p>
-            <button onclick="window.location.reload()" class="upgrade-button">リトライ</button>
-        </div>
-    </div>
-
-    <div id="hud">
-        <span>スコア: <span id="score-display">0</span></span>
-        <span>体力: <span id="health-display">5</span></span>
-    </div>
-
-    <script src="script.js"></script>
-</body>
-</html>
+    <div id
